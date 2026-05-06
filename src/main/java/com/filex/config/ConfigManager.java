@@ -22,6 +22,25 @@ import java.nio.file.Paths;
  */
 public final class ConfigManager {
 
+    // Static initializer to set log directory BEFORE any logger is created
+    static {
+        try {
+            Path appHome = resolveAppHome();
+            Path logsDir = appHome.resolve("logs");
+            
+            // Ensure logs directory exists before setting property
+            if (!Files.exists(logsDir)) {
+                Files.createDirectories(logsDir);
+            }
+            
+            System.setProperty("FILEX_LOG_DIR", logsDir.toAbsolutePath().toString());
+        } catch (Exception e) {
+            // Fallback to relative logs directory if resolution fails
+            System.setProperty("FILEX_LOG_DIR", "logs");
+            System.err.println("Warning: Could not resolve log directory, using relative path: " + e.getMessage());
+        }
+    }
+
     private static final Logger log = LoggerFactory.getLogger(ConfigManager.class);
 
     private static final String ENV_FILEX_HOME = "FILEX_HOME";

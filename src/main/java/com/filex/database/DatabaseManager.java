@@ -181,17 +181,21 @@ public final class DatabaseManager {
     }
 
     private void recordStartup(Statement stmt) throws SQLException {
-        String appVersion = escapeString(System.getProperty("filex.version", "1.0.0-SNAPSHOT"));
-        String hostname   = escapeString(getHostname());
-        String osName     = escapeString(System.getProperty("os.name", "unknown"));
-        String javaVer    = escapeString(System.getProperty("java.version", "unknown"));
+        String appVersion = System.getProperty("filex.version", "1.0.0-SNAPSHOT");
+        String hostname = getHostname();
+        String osName = System.getProperty("os.name", "unknown");
+        String javaVer = System.getProperty("java.version", "unknown");
 
-        stmt.execute(String.format(
-                "INSERT INTO app_startup_log (app_version, hostname, os_name, java_version) " +
-                "VALUES ('%s', '%s', '%s', '%s');",
-                appVersion, hostname, osName, javaVer
-        ));
-        log.debug("Startup record inserted into app_startup_log.");
+        // Use PreparedStatement to prevent SQL injection
+        String sql = "INSERT INTO app_startup_log (app_version, hostname, os_name, java_version) VALUES (?, ?, ?, ?)";
+        try (var pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, appVersion);
+            pstmt.setString(2, hostname);
+            pstmt.setString(3, osName);
+            pstmt.setString(4, javaVer);
+            pstmt.executeUpdate();
+            log.debug("Startup record inserted into app_startup_log.");
+        }
     }
 
     private static String getHostname() {
@@ -200,11 +204,5 @@ public final class DatabaseManager {
         } catch (Exception e) {
             return "unknown";
         }
-    }
-
-    /** Minimal SQL string escaping — single quotes only. Not for user input. */
-    private static String escapeString(String value) {
-        if (value == null) return "";
-        return value.replace("'", "''");
     }
 }

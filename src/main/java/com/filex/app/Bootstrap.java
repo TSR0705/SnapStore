@@ -67,15 +67,17 @@ public final class Bootstrap {
             EventBus eventBus = new EventBus();
             log.info("Event bus created.");
 
-            // Step 4: Create view manager
-            log.info("[4/4] Creating view manager...");
-            // Create AppContext with null ViewManager initially
-            AppContext appContext = new AppContext(config, databaseManager, eventBus, null);
-            // Create ViewManager with the context
+            // Step 4: Create AppContext and ViewManager
+            log.info("[4/4] Creating application context and view manager...");
+            // Create AppContext with core infrastructure (no ViewManager yet)
+            AppContext appContext = new AppContext(config, databaseManager, eventBus);
+            
+            // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);
-            // Update the context with the ViewManager (using a setter or recreating)
-            appContext = new AppContext(config, databaseManager, eventBus, viewManager);
-            log.info("View manager created.");
+            
+            // Register ViewManager with AppContext (breaks circular dependency)
+            appContext.setViewManager(viewManager);
+            log.info("Application context and view manager created.");
 
             log.info("========================================");
             log.info("Bootstrap Complete: {}", appContext.summary());

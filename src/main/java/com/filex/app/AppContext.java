@@ -17,34 +17,50 @@ import java.util.Objects;
  *
  * <p>Lifecycle:
  * <ol>
- *   <li>Constructed by {@link Bootstrap} after all components are initialized</li>
- *   <li>Passed to {@link ViewManager} and injected into controllers</li>
+ *   <li>Constructed by {@link Bootstrap} with core infrastructure</li>
+ *   <li>ViewManager is set via {@link #setViewManager(ViewManager)} during bootstrap</li>
+ *   <li>Passed to controllers via dependency injection</li>
  *   <li>Held by {@link FileXApplication} until shutdown</li>
  * </ol>
  *
- * <p>This class is immutable after construction. All fields are final.
+ * <p>All fields except ViewManager are final and set at construction.
+ * ViewManager is set once during bootstrap to break circular dependency.
  */
 public final class AppContext {
 
     private final AppConfig config;
     private final DatabaseManager databaseManager;
     private final EventBus eventBus;
-    private final ViewManager viewManager;
+    
+    /** Set once during bootstrap via setViewManager(). */
+    private ViewManager viewManager;
 
     /**
      * Package-private constructor — only {@link Bootstrap} should create instances.
+     * ViewManager is set separately via {@link #setViewManager(ViewManager)}.
      */
     AppContext(
             AppConfig config,
             DatabaseManager databaseManager,
-            EventBus eventBus,
-            ViewManager viewManager
+            EventBus eventBus
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus must not be null");
-        // ViewManager can be null during bootstrap phase
-        this.viewManager = viewManager;
+    }
+
+    /**
+     * Sets the ViewManager. Called once by {@link Bootstrap} after AppContext creation.
+     * This breaks the circular dependency between AppContext and ViewManager.
+     *
+     * @param viewManager the view manager to register
+     * @throws IllegalStateException if called more than once
+     */
+    void setViewManager(ViewManager viewManager) {
+        if (this.viewManager != null) {
+            throw new IllegalStateException("ViewManager already set. Cannot set twice.");
+        }
+        this.viewManager = Objects.requireNonNull(viewManager, "viewManager must not be null");
     }
 
     /** Returns the resolved application configuration. */
@@ -62,8 +78,15 @@ public final class AppContext {
         return eventBus;
     }
 
-    /** Returns the view manager. */
+    /** 
+     * Returns the view manager.
+     * 
+     * @throws IllegalStateException if called before ViewManager is set
+     */
     public ViewManager viewManager() {
+        if (viewManager == null) {
+            throw new IllegalStateException("ViewManager not yet initialized. Called too early in bootstrap.");
+        }
         return viewManager;
     }
 
