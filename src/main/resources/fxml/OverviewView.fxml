@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.filex.controller.OverviewController"
+      spacing="20" alignment="TOP_LEFT"
+      styleClass="view-container">
+
+    <padding>
+        <Insets top="30" right="30" bottom="30" left="30"/>
+    </padding>
+
+    <!-- Header -->
+    <Label fx:id="lblAppName" styleClass="view-title" text="FileX"/>
+    <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Version 1.0.0"/>
+
+    <!-- Status -->
+    <VBox spacing="10">
+        <Label text="Status:" styleClass="label-bold"/>
+        <Label fx:id="lblStatus" text="Initializing..." styleClass="status-label"/>
+    </VBox>
+
+    <!-- Info -->
+    <VBox spacing="10">
+        <Label text="Phase 1A: Foundation Complete" styleClass="label-bold"/>
+        <Label text="✓ Application bootstrap" wrapText="true"/>
+        <Label text="✓ Configuration system" wrapText="true"/>
+        <Label text="✓ SQLite database initialized" wrapText="true"/>
+        <Label text="✓ Event bus ready" wrapText="true"/>
+        <Label text="✓ View navigation system" wrapText="true"/>
+        <Label text="✓ Logging infrastructure" wrapText="true"/>
+    </VBox>
+
+    <Label text="Ready for Phase 2 implementation." styleClass="info-text"/>
+
+</VBox>

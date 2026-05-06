@@ -1,0 +1,164 @@
+/* ============================================================================
+   FileX Main Stylesheet
+   Phase 1A: Clean, professional foundation styling
+   ============================================================================ */
+
+/* Root Variables */
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 14px;
+
+    /* Color Palette */
+    -color-primary: #2c3e50;
+    -color-secondary: #34495e;
+    -color-accent: #3498db;
+    -color-danger: #e74c3c;
+    -color-success: #27ae60;
+    -color-background: #ecf0f1;
+    -color-surface: #ffffff;
+    -color-border: #bdc3c7;
+    -color-text: #2c3e50;
+    -color-text-muted: #7f8c8d;
+}
+
+/* ============================================================================
+   Layout Components
+   ============================================================================ */
+
+.sidebar {
+    -fx-background-color: -color-primary;
+    -fx-padding: 20 10 20 10;
+}
+
+.content-area {
+    -fx-background-color: -color-background;
+}
+
+.view-container {
+    -fx-background-color: -color-surface;
+    -fx-padding: 30;
+}
+
+/* ============================================================================
+   Typography
+   ============================================================================ */
+
+.app-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-padding: 10 0 0 0;
+}
+
+.app-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #95a5a6;
+    -fx-padding: 0 0 10 0;
+}
+
+.view-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-primary;
+}
+
+.view-subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: -color-text-muted;
+}
+
+.label-bold {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text;
+}
+
+.status-label {
+    -fx-font-size: 16px;
+    -fx-text-fill: -color-success;
+    -fx-font-weight: bold;
+}
+
+.info-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-text-muted;
+    -fx-padding: 10 0 0 0;
+}
+
+/* ============================================================================
+   Navigation Buttons
+   ============================================================================ */
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 12 16 12 16;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.nav-button:hover {
+    -fx-background-color: -color-secondary;
+}
+
+.nav-button:pressed {
+    -fx-background-color: -color-accent;
+}
+
+.nav-button-danger {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e74c3c;
+    -fx-font-size: 14px;
+    -fx-padding: 12 16 12 16;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-alignment: CENTER;
+}
+
+.nav-button-danger:hover {
+    -fx-background-color: rgba(231, 76, 60, 0.2);
+}
+
+.nav-button-danger:pressed {
+    -fx-background-color: -color-danger;
+    -fx-text-fill: white;
+}
+
+/* ============================================================================
+   Separators
+   ============================================================================ */
+
+.separator {
+    -fx-padding: 8 0 8 0;
+}
+
+.sidebar .separator .line {
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ============================================================================
+   Scrollbars
+   ============================================================================ */
+
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: -color-border;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: -color-border;
+    -fx-background-radius: 4;
+}

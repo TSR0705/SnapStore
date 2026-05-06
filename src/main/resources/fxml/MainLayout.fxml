@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.filex.controller.MainLayoutController"
+            prefHeight="700.0" prefWidth="1100.0"
+            stylesheets="@../css/main.css">
+
+    <!-- LEFT SIDEBAR -->
+    <left>
+        <VBox fx:id="sidebar" styleClass="sidebar" spacing="8" prefWidth="200">
+            <padding>
+                <Insets top="20" right="10" bottom="20" left="10"/>
+            </padding>
+
+            <!-- App Title -->
+            <Label text="FileX" styleClass="app-title"/>
+            <Label text="Endpoint Monitor" styleClass="app-subtitle"/>
+
+            <Separator/>
+
+            <!-- Navigation Buttons -->
+            <Button fx:id="btnOverview" text="Overview" maxWidth="Infinity" styleClass="nav-button"/>
+
+            <!-- Spacer -->
+            <VBox VBox.vgrow="ALWAYS"/>
+
+            <Separator/>
+
+            <!-- Exit Button -->
+            <Button fx:id="btnExit" text="Exit" maxWidth="Infinity" styleClass="nav-button-danger"/>
+        </VBox>
+    </left>
+
+    <!-- CENTER CONTENT AREA -->
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area">
+            <!-- Views are dynamically swapped here by ViewManager -->
+        </StackPane>
+    </center>
+
+</BorderPane>
