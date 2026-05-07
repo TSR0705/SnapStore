@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -61,19 +63,29 @@ public final class EventBus {
      */
     private volatile boolean shutdown = false;
 
+    /**
+     * Metrics counters for observability.
+     */
+    private final AtomicLong totalPublishedEvents = new AtomicLong(0);
+    private final AtomicLong totalAsyncEvents = new AtomicLong(0);
+    private final AtomicLong totalDroppedEvents = new AtomicLong(0);
+    private final AtomicLong totalDispatchFailures = new AtomicLong(0);
+    private final int queueCapacity;
+
     public EventBus() {
         this(DEFAULT_QUEUE_CAPACITY);
     }
 
     public EventBus(int queueCapacity) {
+        this.queueCapacity = queueCapacity;
         this.asyncQueue = new LinkedBlockingQueue<>(queueCapacity);
         this.dispatchExecutor = Executors.newFixedThreadPool(
                 DISPATCHER_THREADS,
                 new ThreadFactory() {
-                    private int counter = 0;
+                    private final AtomicInteger counter = new AtomicInteger(0);
                     @Override
                     public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r, "filex-event-dispatcher-" + (++counter));
+                        Thread t = new Thread(r, "filex-event-dispatcher-" + counter.incrementAndGet());
                         t.setDaemon(false); // Ensure proper shutdown
                         return t;
                     }
@@ -134,6 +146,7 @@ public final class EventBus {
     public void publish(AppEvent event) {
         if (event == null) throw new IllegalArgumentException("event must not be null");
 
+        totalPublishedEvents.incrementAndGet();
         log.debug("Publishing event (sync): {}", event);
         dispatchToSubscribers(event);
     }
@@ -153,6 +166,8 @@ public final class EventBus {
         if (event == null) throw new IllegalArgumentException("event must not be null");
         if (shutdown) throw new IllegalStateException("EventBus is shutdown");
 
+        totalPublishedEvents.incrementAndGet();
+        totalAsyncEvents.incrementAndGet();
         log.debug("Publishing event (async): {}", event);
         asyncQueue.put(event); // Blocks if queue is full
     }
@@ -170,8 +185,11 @@ public final class EventBus {
 
         boolean queued = asyncQueue.offer(event);
         if (queued) {
+            totalPublishedEvents.incrementAndGet();
+            totalAsyncEvents.incrementAndGet();
             log.debug("Publishing event (async): {}", event);
         } else {
+            totalDroppedEvents.incrementAndGet();
             log.warn("Async queue full, event dropped: {}", event.getClass().getSimpleName());
         }
         return queued;
@@ -191,6 +209,30 @@ public final class EventBus {
      */
     public int queueSize() {
         return asyncQueue.size();
+    }
+
+    /**
+     * Returns a snapshot of EventBus runtime metrics.
+     *
+     * <p>Provides observability into queue depth, subscriber count,
+     * event counters, and dispatch failures for monitoring and diagnostics.
+     */
+    public EventBusMetrics getMetrics() {
+        int totalSubscribers = subscribers.values().stream()
+                .mapToInt(CopyOnWriteArrayList::size)
+                .sum();
+
+        return new EventBusMetrics(
+                asyncQueue.size(),
+                queueCapacity,
+                totalSubscribers,
+                DISPATCHER_THREADS,
+                totalPublishedEvents.get(),
+                totalAsyncEvents.get(),
+                totalDroppedEvents.get(),
+                totalDispatchFailures.get(),
+                shutdown
+        );
     }
 
     /**
@@ -288,6 +330,7 @@ public final class EventBus {
             try {
                 handler.accept(event);
             } catch (Exception e) {
+                totalDispatchFailures.incrementAndGet();
                 log.error("Subscriber threw exception handling event [{}]: {}",
                         event.getClass().getSimpleName(), e.getMessage(), e);
             }
