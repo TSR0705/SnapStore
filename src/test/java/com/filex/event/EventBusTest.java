@@ -218,4 +218,60 @@ class EventBusTest {
         assertNotNull(event.occurredAt());
         assertEquals("Bootstrap", event.source());
     }
+
+    @Test
+    void testEventBusMetrics() throws Exception {
+        // Given
+        eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
+        eventBus.subscribe(ApplicationShutdownEvent.class, e -> {});
+
+        // When
+        eventBus.publish(new ApplicationStartedEvent());
+        eventBus.publishAsync(new ApplicationShutdownEvent());
+        
+        // Give async event time to be processed
+        Thread.sleep(100);
+
+        EventBusMetrics metrics = eventBus.getMetrics();
+
+        // Then
+        assertNotNull(metrics);
+        assertEquals(2, metrics.getTotalSubscribers(), "Should have 2 subscribers");
+        assertEquals(2, metrics.getTotalPublishedEvents(), "Should have published 2 events");
+        assertEquals(1, metrics.getTotalAsyncEvents(), "Should have 1 async event");
+        assertEquals(0, metrics.getTotalDroppedEvents(), "Should have 0 dropped events");
+        assertEquals(100, metrics.getQueueCapacity(), "Queue capacity should be 100");
+        assertFalse(metrics.isShutdown(), "EventBus should not be shutdown");
+        assertTrue(metrics.getQueueUtilization() >= 0.0 && metrics.getQueueUtilization() <= 100.0,
+                "Queue utilization should be between 0 and 100");
+    }
+
+    @Test
+    void testEventPriorityDefaults() {
+        // Given
+        List<ApplicationStartedEvent> received = new ArrayList<>();
+        eventBus.subscribe(ApplicationStartedEvent.class, received::add);
+
+        // When
+        eventBus.publish(new ApplicationStartedEvent());
+
+        // Then
+        ApplicationStartedEvent event = received.get(0);
+        assertNotNull(event.priority(), "Event should have a priority");
+        assertEquals(EventPriority.NORMAL, event.priority(), "Default priority should be NORMAL");
+    }
+
+    @Test
+    void testMetricsAfterShutdown() {
+        // Given
+        eventBus.publish(new ApplicationStartedEvent());
+
+        // When
+        eventBus.shutdown();
+        EventBusMetrics metrics = eventBus.getMetrics();
+
+        // Then
+        assertTrue(metrics.isShutdown(), "Metrics should reflect shutdown state");
+        assertEquals(1, metrics.getTotalPublishedEvents(), "Published event count should persist");
+    }
 }
