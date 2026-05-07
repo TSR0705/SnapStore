@@ -17,6 +17,7 @@ import java.util.UUID;
  *   <li>Timestamp of when the event occurred</li>
  *   <li>Source identifier (component that created the event)</li>
  *   <li>Optional correlation ID for event chains</li>
+ *   <li>Priority level for future priority-based dispatch</li>
  * </ul>
  */
 public abstract class AppEvent {
@@ -25,12 +26,13 @@ public abstract class AppEvent {
     private final Instant occurredAt;
     private final String source;
     private final String correlationId;
+    private final EventPriority priority;
 
     /**
      * @param source logical name of the component that produced this event
      */
     protected AppEvent(String source) {
-        this(source, null);
+        this(source, null, EventPriority.NORMAL);
     }
 
     /**
@@ -38,10 +40,20 @@ public abstract class AppEvent {
      * @param correlationId optional correlation ID for event chains
      */
     protected AppEvent(String source, String correlationId) {
+        this(source, correlationId, EventPriority.NORMAL);
+    }
+
+    /**
+     * @param source logical name of the component that produced this event
+     * @param correlationId optional correlation ID for event chains
+     * @param priority event priority level for future priority-based dispatch
+     */
+    protected AppEvent(String source, String correlationId, EventPriority priority) {
         this.eventId = UUID.randomUUID().toString();
         this.source = Objects.requireNonNull(source, "source must not be null");
         this.occurredAt = Instant.now();
         this.correlationId = correlationId;
+        this.priority = Objects.requireNonNull(priority, "priority must not be null");
     }
 
     /** Unique identifier for this event. */
@@ -64,12 +76,18 @@ public abstract class AppEvent {
         return correlationId;
     }
 
+    /** Event priority level for future priority-based dispatch. */
+    public EventPriority priority() {
+        return priority;
+    }
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" +
                 "eventId='" + eventId + '\'' +
                 ", source='" + source + '\'' +
                 ", occurredAt=" + occurredAt +
+                ", priority=" + priority +
                 (correlationId != null ? ", correlationId='" + correlationId + '\'' : "") +
                 '}';
     }
