@@ -3,6 +3,7 @@ package com.filex.app;
 import com.filex.config.AppConfig;
 import com.filex.config.ConfigManager;
 import com.filex.database.DatabaseManager;
+import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
 import com.filex.ui.ViewManager;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
  *   <li>Configuration resolution (creates app directories)</li>
  *   <li>Database initialization (opens SQLite connection, runs DDL)</li>
  *   <li>Event bus creation</li>
+ *   <li>Monitoring engine creation</li>
  *   <li>View manager creation</li>
  *   <li>AppContext assembly</li>
  * </ol>
@@ -52,25 +54,30 @@ public final class Bootstrap {
 
         try {
             // Step 1: Resolve configuration
-            log.info("[1/4] Resolving configuration...");
+            log.info("[1/5] Resolving configuration...");
             AppConfig config = ConfigManager.resolve();
             log.info("Configuration resolved: {}", config.summary());
 
             // Step 2: Initialize database
-            log.info("[2/4] Initializing database...");
+            log.info("[2/5] Initializing database...");
             DatabaseManager databaseManager = new DatabaseManager(config);
             databaseManager.initialize();
             log.info("Database initialized: {}", config.databaseFile());
 
             // Step 3: Create event bus
-            log.info("[3/4] Creating event bus...");
+            log.info("[3/5] Creating event bus...");
             EventBus eventBus = new EventBus();
             log.info("Event bus created.");
 
-            // Step 4: Create AppContext and ViewManager
-            log.info("[4/4] Creating application context and view manager...");
+            // Step 4: Create monitoring engine
+            log.info("[4/5] Creating monitoring engine...");
+            MonitoringEngine monitoringEngine = new MonitoringEngine(eventBus);
+            log.info("Monitoring engine created.");
+
+            // Step 5: Create AppContext and ViewManager
+            log.info("[5/5] Creating application context and view manager...");
             // Create AppContext with core infrastructure (no ViewManager yet)
-            AppContext appContext = new AppContext(config, databaseManager, eventBus);
+            AppContext appContext = new AppContext(config, databaseManager, eventBus, monitoringEngine);
             
             // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);
