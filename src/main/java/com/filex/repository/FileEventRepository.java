@@ -198,9 +198,9 @@ public final class FileEventRepository {
         long timestampMillis = rs.getLong("timestamp");
         Instant timestamp = Instant.ofEpochMilli(timestampMillis);
 
-        // Parse created_at - SQLite datetime format needs conversion
-        String createdAtStr = rs.getString("created_at");
-        Instant createdAt = parseTimestamp(createdAtStr);
+        // Parse created_at from epoch milliseconds
+        long createdAtMillis = rs.getLong("created_at");
+        Instant createdAt = Instant.ofEpochMilli(createdAtMillis);
 
         return FileEventEntity.builder()
                 .id(rs.getLong("id"))
@@ -218,30 +218,5 @@ public final class FileEventRepository {
                 .metadata(rs.getString("metadata"))
                 .createdAt(createdAt)
                 .build();
-    }
-
-    /**
-     * Parses timestamp from either epoch milliseconds or SQLite datetime format.
-     */
-    private Instant parseTimestamp(String value) {
-        if (value == null) {
-            return Instant.now();
-        }
-        
-        // Try parsing as epoch milliseconds first
-        try {
-            long millis = Long.parseLong(value);
-            return Instant.ofEpochMilli(millis);
-        } catch (NumberFormatException e) {
-            // Fall back to ISO-8601 or SQLite datetime format
-            try {
-                return Instant.parse(value);
-            } catch (Exception ex) {
-                // SQLite datetime format: "2024-01-15 10:30:45"
-                // Convert to ISO-8601 by replacing space with 'T' and adding 'Z'
-                String iso8601 = value.replace(" ", "T") + "Z";
-                return Instant.parse(iso8601);
-            }
-        }
     }
 }

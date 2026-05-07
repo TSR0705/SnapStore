@@ -129,6 +129,13 @@ public final class DatabaseManager {
     }
 
     /**
+     * Creates a new StartupLogRepository instance.
+     */
+    public com.filex.repository.StartupLogRepository startupLogRepository() {
+        return new com.filex.repository.StartupLogRepository(getConnection());
+    }
+
+    /**
      * Closes the database connection. Safe to call multiple times.
      */
     public void shutdown() {
@@ -197,6 +204,8 @@ public final class DatabaseManager {
         // Register all migrations in order
         migrationManager.register(new com.filex.persistence.migrations.V001_InitialSchema());
         migrationManager.register(new com.filex.persistence.migrations.V002_CreateIndexes());
+        migrationManager.register(new com.filex.persistence.migrations.V003_FixSchemaVersionTimestamp());
+        migrationManager.register(new com.filex.persistence.migrations.V004_AddSyncQueueUniqueConstraint());
 
         // Execute pending migrations
         migrationManager.migrate();
@@ -213,15 +222,8 @@ public final class DatabaseManager {
         String osName = System.getProperty("os.name", "unknown");
         String javaVer = System.getProperty("java.version", "unknown");
 
-        String sql = "INSERT INTO app_startup_log (app_version, hostname, os_name, java_version) VALUES (?, ?, ?, ?)";
-        try (var pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, appVersion);
-            pstmt.setString(2, hostname);
-            pstmt.setString(3, osName);
-            pstmt.setString(4, javaVer);
-            pstmt.executeUpdate();
-            log.debug("Startup record inserted into app_startup_log.");
-        }
+        com.filex.repository.StartupLogRepository startupLogRepo = startupLogRepository();
+        startupLogRepo.recordStartup(appVersion, hostname, osName, javaVer);
     }
 
     private static String getHostname() {
