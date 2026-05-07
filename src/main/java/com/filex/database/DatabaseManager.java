@@ -50,7 +50,7 @@ public final class DatabaseManager {
     }
 
     /**
-     * Opens the SQLite connection and bootstraps the schema.
+     * Opens the SQLite connection and bootstraps the schema via migrations.
      *
      * @throws DatabaseException if the connection cannot be established
      */
@@ -65,7 +65,8 @@ public final class DatabaseManager {
             log.info("SQLite connection established.");
 
             applyPragmas();
-            bootstrapSchema();
+            runMigrations();
+            recordStartup();
 
             log.info("Database initialization complete.");
         } catch (SQLException e) {
@@ -83,6 +84,34 @@ public final class DatabaseManager {
             throw new IllegalStateException("DatabaseManager has not been initialized. Call initialize() first.");
         }
         return connection;
+    }
+
+    /**
+     * Creates a new transaction template for the current connection.
+     */
+    public com.filex.persistence.TransactionTemplate transactionTemplate() {
+        return new com.filex.persistence.TransactionTemplate(getConnection());
+    }
+
+    /**
+     * Creates a new FileEventRepository instance.
+     */
+    public com.filex.repository.FileEventRepository fileEventRepository() {
+        return new com.filex.repository.FileEventRepository(getConnection());
+    }
+
+    /**
+     * Creates a new SettingsRepository instance.
+     */
+    public com.filex.repository.SettingsRepository settingsRepository() {
+        return new com.filex.repository.SettingsRepository(getConnection());
+    }
+
+    /**
+     * Creates a new AlertRepository instance.
+     */
+    public com.filex.repository.AlertRepository alertRepository() {
+        return new com.filex.repository.AlertRepository(getConnection());
     }
 
     /**
@@ -143,50 +172,33 @@ public final class DatabaseManager {
     }
 
     /**
-     * Creates the baseline schema tables if they do not already exist.
-     *
-     * <p>Phase 1A only creates the metadata/audit table. Domain tables
-     * (events, alerts, snapshots) are added in later phases.
+     * Executes database migrations to ensure schema is up-to-date.
      */
-    private void bootstrapSchema() throws SQLException {
-        log.debug("Bootstrapping database schema...");
+    private void runMigrations() throws SQLException {
+        log.debug("Running database migrations...");
 
-        try (Statement stmt = connection.createStatement()) {
-            // Schema version tracking — used for future migrations
-            stmt.execute("""
-                    CREATE TABLE IF NOT EXISTS schema_version (
-                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                        version     TEXT    NOT NULL,
-                        applied_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-                        description TEXT
-                    );
-                    """);
+        com.filex.persistence.MigrationManager migrationManager =
+                new com.filex.persistence.MigrationManager(connection);
 
-            // Application startup audit log
-            stmt.execute("""
-                    CREATE TABLE IF NOT EXISTS app_startup_log (
-                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                        started_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-                        app_version  TEXT    NOT NULL,
-                        hostname     TEXT,
-                        os_name      TEXT,
-                        java_version TEXT
-                    );
-                    """);
+        // Register all migrations in order
+        migrationManager.register(new com.filex.persistence.migrations.V001_InitialSchema());
+        migrationManager.register(new com.filex.persistence.migrations.V002_CreateIndexes());
 
-            recordStartup(stmt);
-        }
+        // Execute pending migrations
+        migrationManager.migrate();
 
-        log.info("Schema bootstrap complete.");
+        log.info("Database migrations complete.");
     }
 
-    private void recordStartup(Statement stmt) throws SQLException {
+    /**
+     * Records application startup in the audit log.
+     */
+    private void recordStartup() throws SQLException {
         String appVersion = System.getProperty("filex.version", "1.0.0-SNAPSHOT");
         String hostname = getHostname();
         String osName = System.getProperty("os.name", "unknown");
         String javaVer = System.getProperty("java.version", "unknown");
 
-        // Use PreparedStatement to prevent SQL injection
         String sql = "INSERT INTO app_startup_log (app_version, hostname, os_name, java_version) VALUES (?, ?, ?, ?)";
         try (var pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, appVersion);
