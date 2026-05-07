@@ -2,6 +2,7 @@ package com.filex.app;
 
 import com.filex.config.AppConfig;
 import com.filex.database.DatabaseManager;
+import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
 import com.filex.ui.ViewManager;
 
@@ -31,6 +32,7 @@ public final class AppContext {
     private final AppConfig config;
     private final DatabaseManager databaseManager;
     private final EventBus eventBus;
+    private final MonitoringEngine monitoringEngine;
     
     /** Set once during bootstrap via setViewManager(). */
     private ViewManager viewManager;
@@ -42,11 +44,13 @@ public final class AppContext {
     AppContext(
             AppConfig config,
             DatabaseManager databaseManager,
-            EventBus eventBus
+            EventBus eventBus,
+            MonitoringEngine monitoringEngine
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus must not be null");
+        this.monitoringEngine = Objects.requireNonNull(monitoringEngine, "monitoringEngine must not be null");
     }
 
     /**
@@ -78,6 +82,11 @@ public final class AppContext {
         return eventBus;
     }
 
+    /** Returns the monitoring engine. */
+    public MonitoringEngine monitoringEngine() {
+        return monitoringEngine;
+    }
+
     /** 
      * Returns the view manager.
      * 
@@ -96,10 +105,11 @@ public final class AppContext {
      */
     public String summary() {
         return String.format(
-                "[AppContext] config=%s dbConnected=%b eventBusReady=%b viewManagerReady=%b",
+                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b viewManagerReady=%b",
                 config.appName(),
                 databaseManager.isConnected(),
                 eventBus != null,
+                monitoringEngine != null,
                 viewManager != null
         );
     }
