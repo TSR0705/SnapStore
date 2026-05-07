@@ -115,6 +115,20 @@ public final class DatabaseManager {
     }
 
     /**
+     * Creates a new FingerprintRepository instance.
+     */
+    public com.filex.repository.FingerprintRepository fingerprintRepository() {
+        return new com.filex.repository.FingerprintRepository(getConnection());
+    }
+
+    /**
+     * Creates a new SyncQueueRepository instance.
+     */
+    public com.filex.repository.SyncQueueRepository syncQueueRepository() {
+        return new com.filex.repository.SyncQueueRepository(getConnection());
+    }
+
+    /**
      * Closes the database connection. Safe to call multiple times.
      */
     public void shutdown() {
