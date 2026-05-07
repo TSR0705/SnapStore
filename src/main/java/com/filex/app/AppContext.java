@@ -1,5 +1,6 @@
 package com.filex.app;
 
+import com.filex.alert.AlertEngine;
 import com.filex.config.AppConfig;
 import com.filex.database.DatabaseManager;
 import com.filex.detection.DetectionEngine;
@@ -35,6 +36,7 @@ public final class AppContext {
     private final EventBus eventBus;
     private final MonitoringEngine monitoringEngine;
     private final DetectionEngine detectionEngine;
+    private final AlertEngine alertEngine;
     
     /** Set once during bootstrap via setViewManager(). */
     private ViewManager viewManager;
@@ -48,13 +50,15 @@ public final class AppContext {
             DatabaseManager databaseManager,
             EventBus eventBus,
             MonitoringEngine monitoringEngine,
-            DetectionEngine detectionEngine
+            DetectionEngine detectionEngine,
+            AlertEngine alertEngine
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus must not be null");
         this.monitoringEngine = Objects.requireNonNull(monitoringEngine, "monitoringEngine must not be null");
         this.detectionEngine = Objects.requireNonNull(detectionEngine, "detectionEngine must not be null");
+        this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
     }
 
     /**
@@ -96,6 +100,11 @@ public final class AppContext {
         return detectionEngine;
     }
 
+    /** Returns the alert engine. */
+    public AlertEngine alertEngine() {
+        return alertEngine;
+    }
+
     /** 
      * Returns the view manager.
      * 
@@ -114,12 +123,13 @@ public final class AppContext {
      */
     public String summary() {
         return String.format(
-                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b viewManagerReady=%b",
+                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b viewManagerReady=%b",
                 config.appName(),
                 databaseManager.isConnected(),
                 eventBus != null,
                 monitoringEngine != null,
                 detectionEngine != null,
+                alertEngine != null,
                 viewManager != null
         );
     }
