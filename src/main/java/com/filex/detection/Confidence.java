@@ -11,15 +11,35 @@ public enum Confidence {
     /**
      * Low confidence - behavior may be suspicious but has high false-positive risk.
      */
-    LOW,
+    LOW(1),
 
     /**
      * Medium confidence - behavior is likely suspicious.
      */
-    MEDIUM,
+    MEDIUM(2),
 
     /**
      * High confidence - behavior is very likely suspicious.
      */
-    HIGH
+    HIGH(3);
+
+    private final int level;
+
+    Confidence(int level) {
+        this.level = level;
+    }
+
+    /**
+     * Returns the numeric confidence level for comparison.
+     */
+    public int getLevel() {
+        return level;
+    }
+
+    /**
+     * Returns the higher of two confidence levels.
+     */
+    public static Confidence max(Confidence a, Confidence b) {
+        return a.level >= b.level ? a : b;
+    }
 }
