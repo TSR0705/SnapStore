@@ -1,12 +1,14 @@
 package com.filex.app;
 
 import com.filex.alert.AlertEngine;
+import com.filex.alert.IncidentPersistenceSubscriber;
 import com.filex.config.AppConfig;
 import com.filex.config.ConfigManager;
 import com.filex.database.DatabaseManager;
 import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
+import com.filex.persistence.IncidentPersistenceService;
 import com.filex.ui.ViewManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +32,8 @@ import org.slf4j.LoggerFactory;
  *   <li>Monitoring engine creation</li>
  *   <li>Detection engine creation</li>
  *   <li>Alert engine creation</li>
+ *   <li>Incident persistence service creation</li>
+ *   <li>Incident persistence subscriber creation</li>
  *   <li>View manager creation</li>
  *   <li>AppContext assembly</li>
  * </ol>
@@ -58,41 +62,54 @@ public final class Bootstrap {
 
         try {
             // Step 1: Resolve configuration
-            log.info("[1/7] Resolving configuration...");
+            log.info("[1/9] Resolving configuration...");
             AppConfig config = ConfigManager.resolve();
             log.info("Configuration resolved: {}", config.summary());
 
             // Step 2: Initialize database
-            log.info("[2/7] Initializing database...");
+            log.info("[2/9] Initializing database...");
             DatabaseManager databaseManager = new DatabaseManager(config);
             databaseManager.initialize();
             log.info("Database initialized: {}", config.databaseFile());
 
             // Step 3: Create event bus
-            log.info("[3/7] Creating event bus...");
+            log.info("[3/9] Creating event bus...");
             EventBus eventBus = new EventBus();
             log.info("Event bus created.");
 
             // Step 4: Create monitoring engine
-            log.info("[4/7] Creating monitoring engine...");
+            log.info("[4/9] Creating monitoring engine...");
             MonitoringEngine monitoringEngine = new MonitoringEngine(eventBus);
             log.info("Monitoring engine created.");
 
             // Step 5: Create detection engine
-            log.info("[5/7] Creating detection engine...");
+            log.info("[5/9] Creating detection engine...");
             DetectionEngine detectionEngine = new DetectionEngine(eventBus);
             log.info("Detection engine created.");
 
             // Step 6: Create alert engine
-            log.info("[6/7] Creating alert engine...");
+            log.info("[6/9] Creating alert engine...");
             AlertEngine alertEngine = new AlertEngine(eventBus);
             log.info("Alert engine created.");
 
-            // Step 7: Create AppContext and ViewManager
-            log.info("[7/7] Creating application context and view manager...");
+            // Step 7: Create incident persistence service
+            log.info("[7/9] Creating incident persistence service...");
+            IncidentPersistenceService incidentPersistenceService = 
+                    databaseManager.incidentPersistenceService();
+            log.info("Incident persistence service created.");
+
+            // Step 8: Create incident persistence subscriber
+            log.info("[8/9] Creating incident persistence subscriber...");
+            IncidentPersistenceSubscriber incidentPersistenceSubscriber = 
+                    new IncidentPersistenceSubscriber(eventBus, incidentPersistenceService);
+            log.info("Incident persistence subscriber created.");
+
+            // Step 9: Create AppContext and ViewManager
+            log.info("[9/9] Creating application context and view manager...");
             // Create AppContext with core infrastructure (no ViewManager yet)
             AppContext appContext = new AppContext(config, databaseManager, eventBus, 
-                    monitoringEngine, detectionEngine, alertEngine);
+                    monitoringEngine, detectionEngine, alertEngine,
+                    incidentPersistenceService, incidentPersistenceSubscriber);
             
             // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);

@@ -83,6 +83,10 @@ public final class FileXApplication extends Application {
         primaryStage.show();
         log.info("Primary stage displayed.");
 
+        // Start incident persistence subscriber
+        appContext.incidentPersistenceSubscriber().start();
+        log.info("Incident persistence subscriber started.");
+
         // Publish application started event
         appContext.eventBus().publish(new ApplicationStartedEvent());
         log.info("ApplicationStartedEvent published.");
@@ -107,6 +111,9 @@ public final class FileXApplication extends Application {
             log.info("ApplicationShutdownEvent published.");
 
             // Shutdown in reverse order of initialization
+            appContext.incidentPersistenceSubscriber().stop();
+            log.info("Incident persistence subscriber stopped.");
+            
             appContext.viewManager().clearCache();
             appContext.eventBus().clearAll();
             appContext.databaseManager().shutdown();

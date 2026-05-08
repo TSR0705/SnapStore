@@ -1,11 +1,13 @@
 package com.filex.app;
 
 import com.filex.alert.AlertEngine;
+import com.filex.alert.IncidentPersistenceSubscriber;
 import com.filex.config.AppConfig;
 import com.filex.database.DatabaseManager;
 import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
+import com.filex.persistence.IncidentPersistenceService;
 import com.filex.ui.ViewManager;
 
 import java.util.Objects;
@@ -37,6 +39,8 @@ public final class AppContext {
     private final MonitoringEngine monitoringEngine;
     private final DetectionEngine detectionEngine;
     private final AlertEngine alertEngine;
+    private final IncidentPersistenceService incidentPersistenceService;
+    private final IncidentPersistenceSubscriber incidentPersistenceSubscriber;
     
     /** Set once during bootstrap via setViewManager(). */
     private ViewManager viewManager;
@@ -51,7 +55,9 @@ public final class AppContext {
             EventBus eventBus,
             MonitoringEngine monitoringEngine,
             DetectionEngine detectionEngine,
-            AlertEngine alertEngine
+            AlertEngine alertEngine,
+            IncidentPersistenceService incidentPersistenceService,
+            IncidentPersistenceSubscriber incidentPersistenceSubscriber
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
@@ -59,6 +65,8 @@ public final class AppContext {
         this.monitoringEngine = Objects.requireNonNull(monitoringEngine, "monitoringEngine must not be null");
         this.detectionEngine = Objects.requireNonNull(detectionEngine, "detectionEngine must not be null");
         this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
+        this.incidentPersistenceService = Objects.requireNonNull(incidentPersistenceService, "incidentPersistenceService must not be null");
+        this.incidentPersistenceSubscriber = Objects.requireNonNull(incidentPersistenceSubscriber, "incidentPersistenceSubscriber must not be null");
     }
 
     /**
@@ -105,6 +113,16 @@ public final class AppContext {
         return alertEngine;
     }
 
+    /** Returns the incident persistence service. */
+    public IncidentPersistenceService incidentPersistenceService() {
+        return incidentPersistenceService;
+    }
+
+    /** Returns the incident persistence subscriber. */
+    public IncidentPersistenceSubscriber incidentPersistenceSubscriber() {
+        return incidentPersistenceSubscriber;
+    }
+
     /** 
      * Returns the view manager.
      * 
@@ -123,13 +141,14 @@ public final class AppContext {
      */
     public String summary() {
         return String.format(
-                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b viewManagerReady=%b",
+                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b persistenceReady=%b viewManagerReady=%b",
                 config.appName(),
                 databaseManager.isConnected(),
                 eventBus != null,
                 monitoringEngine != null,
                 detectionEngine != null,
                 alertEngine != null,
+                incidentPersistenceService != null,
                 viewManager != null
         );
     }
