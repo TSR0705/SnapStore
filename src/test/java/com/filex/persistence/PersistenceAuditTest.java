@@ -191,7 +191,7 @@ class PersistenceAuditTest {
              ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM schema_version")) {
             assertTrue(rs.next());
             int migrationCount = rs.getInt(1);
-            assertEquals(4, migrationCount, "Should have exactly 4 migrations");
+            assertEquals(8, migrationCount, "Should have exactly 8 migrations (V001-V008)");
         }
     }
 
