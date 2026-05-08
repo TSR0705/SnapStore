@@ -136,6 +136,49 @@ public final class DatabaseManager {
     }
 
     /**
+     * Creates a new IncidentRepository instance.
+     */
+    public com.filex.repository.IncidentRepository incidentRepository() {
+        return new com.filex.repository.IncidentRepository(getConnection());
+    }
+
+    /**
+     * Creates a new IncidentEvidenceRepository instance.
+     */
+    public com.filex.repository.IncidentEvidenceRepository incidentEvidenceRepository() {
+        return new com.filex.repository.IncidentEvidenceRepository(getConnection());
+    }
+
+    /**
+     * Creates a new ForensicTimelineRepository instance.
+     */
+    public com.filex.repository.ForensicTimelineRepository forensicTimelineRepository() {
+        return new com.filex.repository.ForensicTimelineRepository(getConnection());
+    }
+
+    /**
+     * Creates a new IncidentPersistenceService instance.
+     */
+    public com.filex.persistence.IncidentPersistenceService incidentPersistenceService() {
+        return new com.filex.persistence.IncidentPersistenceService(getConnection());
+    }
+
+    /**
+     * Creates a new InvestigationQueryService instance.
+     */
+    public com.filex.investigation.InvestigationQueryService investigationQueryService() {
+        return new com.filex.investigation.InvestigationQueryService(getConnection());
+    }
+
+    /**
+     * Creates a new ReplayNavigationService instance.
+     */
+    public com.filex.investigation.ReplayNavigationService replayNavigationService(
+            com.filex.investigation.InvestigationMetrics metrics) {
+        return new com.filex.investigation.ReplayNavigationService(getConnection(), metrics);
+    }
+
+    /**
      * Closes the database connection. Safe to call multiple times.
      */
     public void shutdown() {
@@ -206,6 +249,10 @@ public final class DatabaseManager {
         migrationManager.register(new com.filex.persistence.migrations.V002_CreateIndexes());
         migrationManager.register(new com.filex.persistence.migrations.V003_FixSchemaVersionTimestamp());
         migrationManager.register(new com.filex.persistence.migrations.V004_AddSyncQueueUniqueConstraint());
+        migrationManager.register(new com.filex.persistence.migrations.V005_CreateIncidentTables());
+        migrationManager.register(new com.filex.persistence.migrations.V006_CreateIncidentIndexes());
+        migrationManager.register(new com.filex.persistence.migrations.V007_FixEvidenceCascadeDelete());
+        migrationManager.register(new com.filex.persistence.migrations.V008_AddTimelineUniqueConstraint());
 
         // Execute pending migrations
         migrationManager.migrate();
