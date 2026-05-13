@@ -22,7 +22,31 @@ public enum ViewId {
      * Default landing view shown after bootstrap completes.
      * Placeholder for Phase 1A — replaced by Dashboard in Phase 2.
      */
-    OVERVIEW("/fxml/OverviewView.fxml");
+    OVERVIEW("/fxml/OverviewView.fxml"),
+
+    /**
+     * Investigation workspace view (Phase 1I).
+     * Operator interface for incident triage, evidence exploration, and timeline replay.
+     */
+    INVESTIGATION_WORKSPACE("/com/filex/view/investigation-workspace.fxml"),
+
+    /**
+     * Incident detail view (Phase 1I-R2).
+     * Displays incident summary, metadata, and entry points to evidence/replay.
+     */
+    INCIDENT_DETAIL("/com/filex/view/incident-detail.fxml"),
+
+    /**
+     * Evidence exploration view (Phase 1I-R2).
+     * Displays evidence list and details with traversal safeguards.
+     */
+    EVIDENCE_EXPLORATION("/com/filex/view/evidence.fxml"),
+
+    /**
+     * Timeline replay view (Phase 1I-R2).
+     * Forensic timeline replay with step controls and deterministic ordering.
+     */
+    TIMELINE_REPLAY("/com/filex/view/replay.fxml");
 
     // Future phase views (commented out — not implemented yet):
     // DASHBOARD("/fxml/DashboardView.fxml"),
