@@ -8,8 +8,12 @@ import com.filex.database.DatabaseManager;
 import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
+import com.filex.investigation.InvestigationMetrics;
+import com.filex.investigation.InvestigationQueryService;
+import com.filex.investigation.ReplayNavigationService;
 import com.filex.persistence.IncidentPersistenceService;
 import com.filex.ui.ViewManager;
+import com.filex.workspace.WorkspaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +38,8 @@ import org.slf4j.LoggerFactory;
  *   <li>Alert engine creation</li>
  *   <li>Incident persistence service creation</li>
  *   <li>Incident persistence subscriber creation</li>
+ *   <li>Investigation services creation</li>
+ *   <li>Workspace service creation</li>
  *   <li>View manager creation</li>
  *   <li>AppContext assembly</li>
  * </ol>
@@ -62,51 +68,63 @@ public final class Bootstrap {
 
         try {
             // Step 1: Resolve configuration
-            log.info("[1/9] Resolving configuration...");
+            log.info("[1/11] Resolving configuration...");
             AppConfig config = ConfigManager.resolve();
             log.info("Configuration resolved: {}", config.summary());
 
             // Step 2: Initialize database
-            log.info("[2/9] Initializing database...");
+            log.info("[2/11] Initializing database...");
             DatabaseManager databaseManager = new DatabaseManager(config);
             databaseManager.initialize();
             log.info("Database initialized: {}", config.databaseFile());
 
             // Step 3: Create event bus
-            log.info("[3/9] Creating event bus...");
+            log.info("[3/11] Creating event bus...");
             EventBus eventBus = new EventBus();
             log.info("Event bus created.");
 
             // Step 4: Create monitoring engine
-            log.info("[4/9] Creating monitoring engine...");
+            log.info("[4/11] Creating monitoring engine...");
             MonitoringEngine monitoringEngine = new MonitoringEngine(eventBus);
             log.info("Monitoring engine created.");
 
             // Step 5: Create detection engine
-            log.info("[5/9] Creating detection engine...");
+            log.info("[5/11] Creating detection engine...");
             DetectionEngine detectionEngine = new DetectionEngine(eventBus);
             log.info("Detection engine created.");
 
             // Step 6: Create alert engine
-            log.info("[6/9] Creating alert engine...");
+            log.info("[6/11] Creating alert engine...");
             AlertEngine alertEngine = new AlertEngine(eventBus);
             log.info("Alert engine created.");
 
             // Step 7: Create incident persistence service
-            log.info("[7/9] Creating incident persistence service...");
+            log.info("[7/11] Creating incident persistence service...");
             IncidentPersistenceService incidentPersistenceService = 
                     databaseManager.incidentPersistenceService();
             log.info("Incident persistence service created.");
 
             // Step 8: Create incident persistence subscriber
-            log.info("[8/9] Creating incident persistence subscriber...");
+            log.info("[8/11] Creating incident persistence subscriber...");
             IncidentPersistenceSubscriber incidentPersistenceSubscriber = 
                     new IncidentPersistenceSubscriber(eventBus, incidentPersistenceService);
             log.info("Incident persistence subscriber created.");
 
-            // Step 9: Create AppContext and ViewManager
-            log.info("[9/9] Creating application context and view manager...");
-            // Create AppContext with core infrastructure (no ViewManager yet)
+            // Step 9: Create investigation services
+            log.info("[9/11] Creating investigation services...");
+            InvestigationQueryService queryService = databaseManager.investigationQueryService();
+            InvestigationMetrics investigationMetrics = new InvestigationMetrics();
+            ReplayNavigationService replayService = databaseManager.replayNavigationService(investigationMetrics);
+            log.info("Investigation services created.");
+
+            // Step 10: Create workspace service
+            log.info("[10/11] Creating workspace service...");
+            WorkspaceService workspaceService = new WorkspaceService(queryService, replayService, config.dataDir());
+            log.info("Workspace service created.");
+
+            // Step 11: Create AppContext and ViewManager
+            log.info("[11/11] Creating application context and view manager...");
+            // Create AppContext with core infrastructure (no ViewManager/WorkspaceService yet)
             AppContext appContext = new AppContext(config, databaseManager, eventBus, 
                     monitoringEngine, detectionEngine, alertEngine,
                     incidentPersistenceService, incidentPersistenceSubscriber);
@@ -114,8 +132,9 @@ public final class Bootstrap {
             // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);
             
-            // Register ViewManager with AppContext (breaks circular dependency)
+            // Register ViewManager and WorkspaceService with AppContext (breaks circular dependencies)
             appContext.setViewManager(viewManager);
+            appContext.setWorkspaceService(workspaceService);
             log.info("Application context and view manager created.");
 
             log.info("========================================");
