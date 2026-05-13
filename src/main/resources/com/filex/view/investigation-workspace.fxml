@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="workspaceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            prefWidth="1200" prefHeight="800">
+    
+    <!-- Top toolbar -->
+    <top>
+        <HBox spacing="10" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
+            <Label text="Investigation Workspace" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="refreshButton" text="Refresh"/>
+            <ProgressIndicator fx:id="loadingIndicator" visible="false" prefWidth="20" prefHeight="20"/>
+        </HBox>
+    </top>
+    
+    <!-- Main content area -->
+    <center>
+        <SplitPane dividerPositions="0.3">
+            
+            <!-- Left: Incident list panel -->
+            <VBox fx:id="incidentListPanel" spacing="10" style="-fx-padding: 10;">
+                <Label text="Incidents" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                
+                <ListView fx:id="incidentListView" VBox.vgrow="ALWAYS"/>
+                
+                <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+            </VBox>
+            
+            <!-- Right: Detail panel (dynamically loaded) -->
+            <VBox fx:id="detailPanel" spacing="10" style="-fx-padding: 10;">
+                <Label text="Incident Details" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <Label text="Select an incident to view details" style="-fx-text-fill: #999;"/>
+            </VBox>
+            
+        </SplitPane>
+    </center>
+    
+</BorderPane>
