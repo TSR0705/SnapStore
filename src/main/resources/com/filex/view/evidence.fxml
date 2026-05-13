@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="evidenceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      spacing="15" style="-fx-padding: 20;">
+    
+    <!-- Header -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Evidence Exploration" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="traversalDepthLabel" text="Depth: 0/5" style="-fx-font-size: 12px;"/>
+        <Button fx:id="backButton" text="Back"/>
+        <ProgressIndicator fx:id="loadingIndicator" visible="false" prefWidth="20" prefHeight="20"/>
+    </HBox>
+    
+    <Label fx:id="incidentIdLabel" text="Incident: -" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+    
+    <Separator/>
+    
+    <!-- Error display -->
+    <Label fx:id="errorLabel" visible="false" style="-fx-text-fill: #d32f2f;" wrapText="true"/>
+    
+    <!-- Evidence List and Detail Split -->
+    <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
+        
+        <!-- Left: Evidence List -->
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <Label text="Evidence Items" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+            <ListView fx:id="evidenceListView" VBox.vgrow="ALWAYS"/>
+            <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+        </VBox>
+        
+        <!-- Right: Evidence Detail -->
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <Label text="Evidence Details" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+            <TextArea fx:id="evidenceDetailArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
+                      style="-fx-font-family: monospace;"/>
+        </VBox>
+        
+    </SplitPane>
+    
+</VBox>
