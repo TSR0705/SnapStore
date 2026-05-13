@@ -29,6 +29,7 @@
 
             <!-- Navigation Buttons -->
             <Button fx:id="btnOverview" text="Overview" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="btnInvestigation" text="Investigation" maxWidth="Infinity" styleClass="nav-button"/>
 
             <!-- Spacer -->
             <VBox VBox.vgrow="ALWAYS"/>

@@ -111,6 +111,9 @@ public final class FileXApplication extends Application {
             log.info("ApplicationShutdownEvent published.");
 
             // Shutdown in reverse order of initialization
+            appContext.workspaceService().shutdown();
+            log.info("Workspace service stopped.");
+            
             appContext.incidentPersistenceSubscriber().stop();
             log.info("Incident persistence subscriber stopped.");
             

@@ -32,6 +32,7 @@ public final class MainLayoutController {
     @FXML private VBox sidebar;
     @FXML private StackPane contentArea;
     @FXML private Button btnOverview;
+    @FXML private Button btnInvestigation;
     @FXML private Button btnExit;
 
     /**
@@ -57,6 +58,7 @@ public final class MainLayoutController {
 
         // Wire up navigation buttons
         btnOverview.setOnAction(e -> navigateToOverview());
+        btnInvestigation.setOnAction(e -> navigateToInvestigation());
         btnExit.setOnAction(e -> exitApplication());
     }
 
@@ -67,6 +69,11 @@ public final class MainLayoutController {
     private void navigateToOverview() {
         log.debug("User clicked Overview button.");
         appContext.viewManager().navigateTo(ViewId.OVERVIEW);
+    }
+
+    private void navigateToInvestigation() {
+        log.debug("User clicked Investigation button.");
+        appContext.viewManager().navigateTo(ViewId.INVESTIGATION_WORKSPACE);
     }
 
     private void exitApplication() {
