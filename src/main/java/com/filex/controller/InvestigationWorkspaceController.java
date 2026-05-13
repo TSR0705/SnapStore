@@ -1,0 +1,262 @@
+package com.filex.controller;
+
+import com.filex.app.AppContext;
+import com.filex.investigation.IncidentSummary;
+import com.filex.investigation.InvestigationCriteria;
+import com.filex.investigation.InvestigationResult;
+import com.filex.workspace.NavigationContext;
+import com.filex.workspace.WorkspaceService;
+import com.filex.workspace.WorkspaceState;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
+import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.function.Consumer;
+
+/**
+ * Controller for the investigation workspace.
+ *
+ * <p>Responsibilities:
+ * <ul>
+ *   <li>Coordinate incident list rendering</li>
+ *   <li>Handle incident selection</li>
+ *   <li>Delegate to detail/evidence/replay sub-controllers</li>
+ *   <li>Synchronize workspace state</li>
+ * </ul>
+ *
+ * <p>Design principles:
+ * <ul>
+ *   <li><b>NO direct repository access</b> — uses WorkspaceService only</li>
+ *   <li><b>Coordination only</b> — delegates to specialized controllers</li>
+ *   <li><b>Async queries</b> — never blocks UI thread</li>
+ *   <li><b>State synchronization</b> — updates workspace state on changes</li>
+ * </ul>
+ *
+ * <p>This is NOT a god controller. It coordinates high-level workspace
+ * operations and delegates to specialized controllers for details.
+ */
+public final class InvestigationWorkspaceController {
+
+    private static final Logger log = LoggerFactory.getLogger(InvestigationWorkspaceController.class);
+
+    private final AppContext appContext;
+    private final WorkspaceService workspaceService;
+
+    @FXML private BorderPane workspaceRoot;
+    @FXML private VBox incidentListPanel;
+    @FXML private ListView<IncidentSummary> incidentListView;
+    @FXML private Label statusLabel;
+    @FXML private Button refreshButton;
+    @FXML private ProgressIndicator loadingIndicator;
+    @FXML private VBox detailPanel; // Right panel for detail views
+
+    private final ObservableList<IncidentSummary> incidents = FXCollections.observableArrayList();
+
+    /**
+     * Constructor-based dependency injection.
+     */
+    public InvestigationWorkspaceController(AppContext appContext, WorkspaceService workspaceService) {
+        this.appContext = appContext;
+        this.workspaceService = workspaceService;
+    }
+
+    /**
+     * JavaFX lifecycle method — called after FXML injection.
+     */
+    @FXML
+    public void initialize() {
+        log.debug("InvestigationWorkspaceController initialized.");
+
+        // Configure incident list view
+        incidentListView.setItems(incidents);
+        incidentListView.setCellFactory(lv -> new IncidentListCell());
+        incidentListView.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> onIncidentSelected(newVal)
+        );
+
+        // Wire up buttons
+        refreshButton.setOnAction(e -> loadIncidents());
+
+        // Initial load
+        loadIncidents();
+
+        // Transition to incident list context
+        workspaceService.transitionTo(NavigationContext.INCIDENT_LIST);
+    }
+
+    // -------------------------------------------------------------------------
+    // Incident loading
+    // -------------------------------------------------------------------------
+
+    private void loadIncidents() {
+        log.debug("Loading incidents...");
+        
+        setLoading(true);
+        statusLabel.setText("Loading incidents...");
+
+        InvestigationCriteria criteria = InvestigationCriteria.builder().build();
+
+        workspaceService.findIncidentsAsync(
+                criteria,
+                0,  // page 0
+                100, // page size
+                this::onIncidentsLoaded,
+                this::onIncidentsLoadFailed
+        );
+    }
+
+    private void onIncidentsLoaded(InvestigationResult<IncidentSummary> result) {
+        Platform.runLater(() -> {
+            incidents.clear();
+            incidents.addAll(result.getItems());
+            
+            setLoading(false);
+            statusLabel.setText(String.format("Loaded %d incidents", result.getItemCount()));
+            
+            log.info("Incidents loaded: {} items", result.getItemCount());
+        });
+    }
+
+    private void onIncidentsLoadFailed(Throwable error) {
+        Platform.runLater(() -> {
+            setLoading(false);
+            statusLabel.setText("Failed to load incidents: " + error.getMessage());
+            
+            log.error("Failed to load incidents", error);
+            
+            showError("Failed to Load Incidents", 
+                     "Could not load incidents from database.", 
+                     error.getMessage());
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Incident selection
+    // -------------------------------------------------------------------------
+
+    private void onIncidentSelected(IncidentSummary incident) {
+        if (incident == null) {
+            return;
+        }
+
+        log.info("Incident selected: {}", incident.getIncidentId());
+
+        // Update workspace state
+        WorkspaceState newState = workspaceService.currentState().toBuilder()
+                .activeIncidentId(incident.getIncidentId())
+                .navigationContext(NavigationContext.INCIDENT_DETAIL)
+                .build();
+        workspaceService.updateState(newState);
+
+        // Load incident detail view
+        loadDetailView(com.filex.ui.ViewId.INCIDENT_DETAIL, controller -> {
+            if (controller instanceof IncidentDetailController) {
+                ((IncidentDetailController) controller).loadIncident(incident.getIncidentId());
+                ((IncidentDetailController) controller).setWorkspaceController(this);
+            }
+        });
+        
+        statusLabel.setText("Viewing incident: " + incident.getIncidentId());
+    }
+
+    /**
+     * Loads a view into the detail panel.
+     * Public method to allow detail controllers to trigger view transitions.
+     *
+     * @param viewId the view to load
+     * @param controllerCallback callback to configure the loaded controller
+     */
+    public void loadDetailView(com.filex.ui.ViewId viewId, Consumer<Object> controllerCallback) {
+        if (detailPanel == null) {
+            log.error("Detail panel not initialized");
+            return;
+        }
+
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource(viewId.fxmlPath())
+            );
+            loader.setControllerFactory(cls -> 
+                    com.filex.ui.ControllerFactory.create(cls, appContext)
+            );
+            
+            javafx.scene.Parent detailView = loader.load();
+            
+            // Configure controller
+            Object controller = loader.getController();
+            if (controllerCallback != null) {
+                controllerCallback.accept(controller);
+            }
+            
+            // Replace detail panel content
+            detailPanel.getChildren().clear();
+            detailPanel.getChildren().add(detailView);
+            javafx.scene.layout.VBox.setVgrow(detailView, javafx.scene.layout.Priority.ALWAYS);
+            
+            log.debug("Loaded detail view: {}", viewId);
+            
+        } catch (Exception e) {
+            log.error("Failed to load detail view: {}", viewId, e);
+            showError("Failed to Load View", 
+                     "Could not load view: " + viewId, 
+                     e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // UI helpers
+    // -------------------------------------------------------------------------
+
+    private void setLoading(boolean loading) {
+        loadingIndicator.setVisible(loading);
+        refreshButton.setDisable(loading);
+        incidentListView.setDisable(loading);
+    }
+
+    private void showError(String title, String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom list cell for incidents
+    // -------------------------------------------------------------------------
+
+    private static class IncidentListCell extends ListCell<IncidentSummary> {
+        @Override
+        protected void updateItem(IncidentSummary incident, boolean empty) {
+            super.updateItem(incident, empty);
+
+            if (empty || incident == null) {
+                setText(null);
+                setGraphic(null);
+                setStyle("");
+            } else {
+                setText(String.format("[%s] %s - %s (%d evidence)",
+                        incident.getSeverity(),
+                        incident.getIncidentId(),
+                        incident.getTitle(),
+                        incident.getEvidenceCount()));
+
+                // Color-code by severity
+                String style = switch (incident.getSeverity()) {
+                    case "CRITICAL" -> "-fx-text-fill: #d32f2f;";
+                    case "HIGH" -> "-fx-text-fill: #f57c00;";
+                    case "MEDIUM" -> "-fx-text-fill: #fbc02d;";
+                    case "LOW" -> "-fx-text-fill: #388e3c;";
+                    default -> "";
+                };
+                setStyle(style);
+            }
+        }
+    }
+}
