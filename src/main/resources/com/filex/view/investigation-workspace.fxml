@@ -4,37 +4,53 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane fx:id="workspaceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane fx:id="workspaceRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.filex.controller.InvestigationWorkspaceController"
-            prefWidth="1200" prefHeight="800">
+            prefWidth="1200" prefHeight="800"
+            style="-fx-background-color: #080b11;">
     
-    <!-- Top toolbar -->
+    <!-- Top Sleek SaaS Navigation Toolbar -->
     <top>
-        <HBox spacing="10" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
-            <Label text="Investigation Workspace" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <HBox spacing="12" alignment="CENTER_LEFT"
+              style="-fx-background-color: #0e131f; -fx-padding: 16 24 16 24; -fx-border-color: transparent transparent #1e293b transparent; -fx-border-width: 0 0 1 0;">
+            <VBox spacing="2">
+                <Label text="Security Incident &amp; Forensic Workspace" style="-fx-font-size: 18px; -fx-font-weight: 800; -fx-text-fill: white;"/>
+                <Label text="Perform deep-dive telemetry correlation and execute isolation playbooks on active host alerts." style="-fx-font-size: 11px; -fx-text-fill: #94a3b8;"/>
+            </VBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="refreshButton" text="Refresh"/>
-            <ProgressIndicator fx:id="loadingIndicator" visible="false" prefWidth="20" prefHeight="20"/>
+            <Button fx:id="refreshButton" text="Sync Database" styleClass="button-primary" style="-fx-padding: 6 12 6 12;"/>
+            <ProgressIndicator fx:id="loadingIndicator" visible="false" prefWidth="18" prefHeight="18"/>
         </HBox>
     </top>
     
     <!-- Main content area -->
     <center>
-        <SplitPane dividerPositions="0.3">
+        <SplitPane dividerPositions="0.32" styleClass="split-pane" style="-fx-background-color: transparent;">
             
-            <!-- Left: Incident list panel -->
-            <VBox fx:id="incidentListPanel" spacing="10" style="-fx-padding: 10;">
-                <Label text="Incidents" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+            <!-- Left: Incident List Panel (Sleek Dark Card Outline) -->
+            <VBox fx:id="incidentListPanel" spacing="12" style="-fx-padding: 20; -fx-background-color: #080b11;">
+                <Label text="CORRELATED SECURITY INCIDENTS" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #94a3b8; -fx-letter-spacing: 0.5px;"/>
                 
-                <ListView fx:id="incidentListView" VBox.vgrow="ALWAYS"/>
+                <ListView fx:id="incidentListView" VBox.vgrow="ALWAYS" styleClass="list-view"/>
                 
-                <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+                <HBox alignment="CENTER_LEFT" spacing="6">
+                    <Label text="Telemetry Synchronization:" style="-fx-font-size: 11px; -fx-text-fill: #64748b;"/>
+                    <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 11px; -fx-text-fill: -color-success; -fx-font-weight: bold;"/>
+                </HBox>
             </VBox>
             
-            <!-- Right: Detail panel (dynamically loaded) -->
-            <VBox fx:id="detailPanel" spacing="10" style="-fx-padding: 10;">
-                <Label text="Incident Details" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-                <Label text="Select an incident to view details" style="-fx-text-fill: #999;"/>
+            <!-- Right: Dynamic Workspace Panel (Details/Forensics) -->
+            <VBox fx:id="detailPanel" spacing="16" alignment="CENTER"
+                  style="-fx-padding: 24; -fx-background-color: #080b11; -fx-border-color: transparent transparent transparent #1e293b; -fx-border-width: 0 0 0 1;">
+                
+                <!-- Premium SaaS Empty State View -->
+                <VBox spacing="16" alignment="CENTER" style="-fx-max-width: 400;">
+                    <Label text="🔍" style="-fx-font-size: 48px; -fx-text-fill: #475569;"/>
+                    <Label text="Forensic Investigation Terminal" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+                    <Label text="Select a correlated incident threat card from the telemetry ledger to load full host evidence, rule correlation streams, and recommended containment playbooks."
+                           style="-fx-text-fill: #94a3b8; -fx-font-size: 12px; -fx-text-alignment: CENTER;" wrapText="true"/>
+                </VBox>
+                
             </VBox>
             
         </SplitPane>

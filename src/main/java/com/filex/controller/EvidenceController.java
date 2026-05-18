@@ -69,6 +69,16 @@ public final class EvidenceController {
     @FXML private Label statusLabel;
     @FXML private Button traverseButton;
 
+    // SaaS Styled GUI Elements
+    @FXML private Label lblSaaSAlertSeverity;
+    @FXML private Label lblSaaSAlertConfidence;
+    @FXML private Label lblSaaSTriggeredPolicy;
+    @FXML private Label lblSaaSTargetFile;
+    @FXML private Label lblSaaSHostPath;
+    @FXML private Label lblSaaSDetectedTime;
+    @FXML private Label lblSaaSDescription;
+    @FXML private Label lblSaaSPlaybook;
+
     private final ObservableList<EvidenceSummary> evidenceItems = FXCollections.observableArrayList();
     private final Set<String> visitedEvidence = new HashSet<>();
     private int currentTraversalDepth = 0;
@@ -166,6 +176,14 @@ public final class EvidenceController {
         
         if (evidence == null) {
             evidenceDetailArea.clear();
+            if (lblSaaSAlertSeverity != null) lblSaaSAlertSeverity.setText("-");
+            if (lblSaaSAlertConfidence != null) lblSaaSAlertConfidence.setText("-");
+            if (lblSaaSTriggeredPolicy != null) lblSaaSTriggeredPolicy.setText("-");
+            if (lblSaaSTargetFile != null) lblSaaSTargetFile.setText("-");
+            if (lblSaaSHostPath != null) lblSaaSHostPath.setText("-");
+            if (lblSaaSDetectedTime != null) lblSaaSDetectedTime.setText("-");
+            if (lblSaaSDescription != null) lblSaaSDescription.setText("Select an evidence item to display the automated security analysis.");
+            if (lblSaaSPlaybook != null) lblSaaSPlaybook.setText("Follow suggested operations to secure target paths.");
             if (traverseButton != null) {
                 traverseButton.setDisable(true);
             }
@@ -224,6 +242,40 @@ public final class EvidenceController {
         details.append("====================================================\n");
         
         evidenceDetailArea.setText(details.toString());
+
+        // Dynamic SaaS layout population
+        if (lblSaaSAlertSeverity != null) {
+            lblSaaSAlertSeverity.setText(evidence.getSeverity());
+            String color = switch (evidence.getSeverity()) {
+                case "CRITICAL", "HIGH" -> "#ef4444";
+                case "MEDIUM" -> "#fbbf24";
+                default -> "#10b981";
+            };
+            lblSaaSAlertSeverity.setStyle("-fx-background-color: " + color + "; -fx-text-fill: black;");
+        }
+        if (lblSaaSAlertConfidence != null) {
+            lblSaaSAlertConfidence.setText(evidence.getConfidence());
+        }
+        
+        String friendlyPolicy = evidence.getRuleName();
+        if (friendlyPolicy.contains("SensitiveDirectory")) {
+            friendlyPolicy = "Host Directory Alteration Attempt";
+        } else if (friendlyPolicy.contains("RapidModification")) {
+            friendlyPolicy = "Ransomware File Encryption Burst";
+        } else if (friendlyPolicy.contains("MassDeletion")) {
+            friendlyPolicy = "High-Velocity File Deletion Threat";
+        } else if (friendlyPolicy.contains("SuspiciousExtension")) {
+            friendlyPolicy = "Suspicious Extension Locking Event";
+        } else if (friendlyPolicy.contains("HiddenFile")) {
+            friendlyPolicy = "Stealthy Hidden Payload Created";
+        }
+        
+        if (lblSaaSTriggeredPolicy != null) lblSaaSTriggeredPolicy.setText(friendlyPolicy);
+        if (lblSaaSTargetFile != null) lblSaaSTargetFile.setText(cleanFilename);
+        if (lblSaaSHostPath != null) lblSaaSHostPath.setText(evidence.getFilePath());
+        if (lblSaaSDetectedTime != null) lblSaaSDetectedTime.setText(formatTimestamp(evidence.getDetectedAt()));
+        if (lblSaaSDescription != null) lblSaaSDescription.setText(desc);
+        if (lblSaaSPlaybook != null) lblSaaSPlaybook.setText(playbook);
         
         if (traverseButton != null) {
             // Enable traversal if correlation ID exists, we haven't visited it, and depth isn't exceeded
