@@ -66,10 +66,7 @@ public final class ConfigManager {
         Path configDir = appHome.resolve("config");
 
         boolean debugMode = resolveDebugMode();
-        boolean demoMode = resolveDemoMode();
-        Path demoMonitorPath = resolveDemoMonitorPath();
-        boolean validationMode = resolveValidationMode();
-        Path databaseFile = validationMode ? dataDir.resolve("filex-validation.db") : dataDir.resolve(AppConfig.DB_FILENAME);
+        Path databaseFile = dataDir.resolve(AppConfig.DB_FILENAME);
 
         ensureDirectory(appHome);
         ensureDirectory(logsDir);
@@ -84,11 +81,7 @@ public final class ConfigManager {
                 databaseFile,
                 AppConfig.APP_NAME,
                 AppConfig.APP_VERSION,
-                debugMode,
-                demoMode,
-                demoMonitorPath,
-                resolveDemoAutoCreatePath(),
-                validationMode
+                debugMode
         );
 
         log.info(config.summary());
@@ -138,37 +131,7 @@ public final class ConfigManager {
         return "true".equalsIgnoreCase(System.getProperty("filex.debug", "false"));
     }
 
-    private static boolean resolveDemoMode() {
-        String demoEnv = System.getenv("FILEX_DEMO_MODE");
-        if (demoEnv != null) {
-            return "true".equalsIgnoreCase(demoEnv.trim());
-        }
-        return "true".equalsIgnoreCase(System.getProperty("filex.demo.mode", "true"));
-    }
 
-    private static Path resolveDemoMonitorPath() {
-        String monitorPath = System.getProperty("filex.demo.monitor.path");
-        if (monitorPath != null && !monitorPath.isBlank()) {
-            return Paths.get(monitorPath);
-        }
-        return Paths.get("demo-watch");
-    }
-
-    private static boolean resolveDemoAutoCreatePath() {
-        String autoCreateEnv = System.getenv("FILEX_DEMO_AUTO_CREATE");
-        if (autoCreateEnv != null) {
-            return "true".equalsIgnoreCase(autoCreateEnv.trim());
-        }
-        return "true".equalsIgnoreCase(System.getProperty("filex.demo.autoCreatePath", "true"));
-    }
-
-    private static boolean resolveValidationMode() {
-        String validationEnv = System.getenv("FILEX_VALIDATION_MODE");
-        if (validationEnv != null) {
-            return "true".equalsIgnoreCase(validationEnv.trim());
-        }
-        return "true".equalsIgnoreCase(System.getProperty("filex.validation.mode", "false"));
-    }
 
     private static void ensureDirectory(Path path) {
         try {

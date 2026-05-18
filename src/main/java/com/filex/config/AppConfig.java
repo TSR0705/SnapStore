@@ -18,11 +18,7 @@ public record AppConfig(
         Path databaseFile,
         String appName,
         String appVersion,
-        boolean debugMode,
-        boolean demoMode,
-        Path demoMonitorPath,
-        boolean demoAutoCreatePath,
-        boolean validationMode
+        boolean debugMode
 ) {
 
     /** Canonical database filename. */
@@ -53,8 +49,8 @@ public record AppConfig(
      */
     public String summary() {
         return String.format(
-                "[AppConfig] name=%s version=%s home=%s debug=%b demo=%b validation=%b monitor=%s autoCreate=%b",
-                appName, appVersion, appHome, debugMode, demoMode, validationMode, demoMonitorPath, demoAutoCreatePath
+                "[AppConfig] name=%s version=%s home=%s debug=%b",
+                appName, appVersion, appHome, debugMode
         );
     }
 }
