@@ -33,6 +33,16 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
+    
+    // UI Testing
+    testImplementation("org.testfx:testfx-core:4.0.18")
+    testImplementation("org.testfx:testfx-junit5:4.0.18")
+    testImplementation("org.testfx:openjfx-monocle:jdk-12.0.1+2")
+    testImplementation("org.hamcrest:hamcrest:2.2")
+    
+    // Mocking
+    testImplementation("org.mockito:mockito-core:5.11.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.11.0")
 }
 
 tasks.test {
@@ -40,6 +50,11 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
+    systemProperty("testfx.robot", "glass")
+    systemProperty("testfx.headless", "true")
+    systemProperty("prism.order", "sw")
+    systemProperty("prism.text", "t2k")
+    systemProperty("java.awt.headless", "true")
 }
 
 tasks.compileJava {
@@ -54,5 +69,14 @@ tasks.jar {
             "Implementation-Title" to "FileX",
             "Implementation-Version" to version
         )
+    }
+}
+
+tasks.withType<JavaExec> {
+    // Pass all system properties starting with "filex." to the application
+    System.getProperties().forEach { (key, value) ->
+        if (key.toString().startsWith("filex.")) {
+            systemProperty(key.toString(), value)
+        }
     }
 }
