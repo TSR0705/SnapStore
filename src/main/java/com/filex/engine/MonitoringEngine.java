@@ -250,6 +250,13 @@ public final class MonitoringEngine {
     }
 
     /**
+     * Returns the set of actively monitored root directories.
+     */
+    public Set<Path> getMonitoredRoots() {
+        return Collections.unmodifiableSet(monitoredRoots);
+    }
+
+    /**
      * Returns a snapshot of monitoring metrics.
      */
     public MonitoringMetrics getMetrics() {

@@ -309,6 +309,30 @@ public final class IncidentPersistenceService {
     }
 
     /**
+     * Returns the total count of all incidents in the database.
+     */
+    public long getIncidentCount() {
+        try {
+            return incidentRepository.count();
+        } catch (SQLException e) {
+            log.error("Failed to count incidents in database", e);
+            return 0;
+        }
+    }
+
+    /**
+     * Returns the total count of incidents in the database with a specific severity.
+     */
+    public long getIncidentCountBySeverity(String severity) {
+        try {
+            return incidentRepository.countBySeverity(severity);
+        } catch (SQLException e) {
+            log.error("Failed to count incidents in database by severity: {}", severity, e);
+            return 0;
+        }
+    }
+
+    /**
      * Returns persistence metrics.
      */
     public PersistenceMetrics getMetrics() {

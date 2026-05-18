@@ -283,3 +283,83 @@
 .scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover {
     -fx-background-color: -color-accent;
 }
+
+/* ============================================================================
+   Dashboard & KPI Metrics Grid
+   ============================================================================ */
+
+.dashboard-grid {
+    -fx-hgap: 20;
+    -fx-vgap: 20;
+    -fx-padding: 10 0 10 0;
+}
+
+.kpi-card {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 16;
+    -fx-min-width: 210;
+    -fx-pref-width: 230;
+    -fx-min-height: 110;
+}
+
+.kpi-card:hover {
+    -fx-border-color: -color-accent;
+}
+
+.kpi-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text-muted;
+    -fx-text-transform: uppercase;
+}
+
+.kpi-value {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-text;
+    -fx-padding: 8 0 0 0;
+}
+
+.kpi-value-active {
+    -fx-text-fill: -color-success;
+}
+
+.kpi-value-danger {
+    -fx-text-fill: -color-danger;
+}
+
+.kpi-value-warning {
+    -fx-text-fill: -color-medium;
+}
+
+.kpi-value-accent {
+    -fx-text-fill: -color-accent;
+}
+
+.dashboard-section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+    -fx-padding: 20 0 5 0;
+}
+
+.path-list-container {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 16;
+}
+
+.monitored-path-item {
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-accent;
+    -fx-padding: 4 0 4 0;
+}
+

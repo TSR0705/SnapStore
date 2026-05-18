@@ -2,39 +2,68 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.filex.controller.OverviewController"
-      spacing="20" alignment="TOP_LEFT"
+      spacing="24" alignment="TOP_LEFT"
       styleClass="view-container">
 
     <padding>
-        <Insets top="30" right="30" bottom="30" left="30"/>
+        <Insets top="32" right="32" bottom="32" left="32"/>
     </padding>
 
-    <!-- Header -->
-    <Label fx:id="lblAppName" styleClass="view-title" text="FileX"/>
-    <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Version 1.0.0"/>
-
-    <!-- Status -->
-    <VBox spacing="10">
-        <Label text="Status:" styleClass="label-bold"/>
-        <Label fx:id="lblStatus" text="Initializing..." styleClass="status-label"/>
+    <!-- Header Section -->
+    <VBox spacing="4">
+        <Label fx:id="lblAppName" styleClass="view-title" text="FileX Threat Intel"/>
+        <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Surveillance Dashboard Active"/>
     </VBox>
 
-    <!-- Info -->
-    <VBox spacing="10">
-        <Label text="Phase 1A: Foundation Complete" styleClass="label-bold"/>
-        <Label text="✓ Application bootstrap" wrapText="true"/>
-        <Label text="✓ Configuration system" wrapText="true"/>
-        <Label text="✓ SQLite database initialized" wrapText="true"/>
-        <Label text="✓ Event bus ready" wrapText="true"/>
-        <Label text="✓ View navigation system" wrapText="true"/>
-        <Label text="✓ Logging infrastructure" wrapText="true"/>
-    </VBox>
+    <Separator/>
 
-    <Label text="Ready for Phase 2 implementation." styleClass="info-text"/>
+    <!-- Dashboard Cards Grid -->
+    <GridPane styleClass="dashboard-grid" hgap="20" vgap="20">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50.0" />
+            <ColumnConstraints percentWidth="50.0" />
+        </columnConstraints>
+
+        <!-- Protection Status Card -->
+        <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="0" spacing="10">
+            <Label text="Engine Status" styleClass="kpi-title"/>
+            <Label fx:id="lblStatus" text="ACTIVE" styleClass="kpi-value, kpi-value-active"/>
+        </VBox>
+
+        <!-- Events Processed Card -->
+        <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="0" spacing="10">
+            <Label text="Raw Events Normalized" styleClass="kpi-title"/>
+            <Label fx:id="lblEvents" text="0" styleClass="kpi-value, kpi-value-accent"/>
+        </VBox>
+
+        <!-- Active Incidents Card -->
+        <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="1" spacing="10">
+            <Label text="Total Security Incidents" styleClass="kpi-title"/>
+            <Label fx:id="lblIncidents" text="0" styleClass="kpi-value, kpi-value-danger"/>
+        </VBox>
+
+        <!-- Monitored Folders Card -->
+        <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="1" spacing="10">
+            <Label text="Monitored Folders" styleClass="kpi-title"/>
+            <Label fx:id="lblPathCount" text="0" styleClass="kpi-value, kpi-value-warning"/>
+        </VBox>
+    </GridPane>
+
+    <!-- Active Monitored Directories -->
+    <VBox spacing="10">
+        <Label text="Actively Monitored Paths" styleClass="dashboard-section-title"/>
+        <VBox fx:id="vboxPaths" spacing="8" styleClass="path-list-container">
+            <!-- Dynamically populated at runtime -->
+            <Label text="Acquiring host directory telemetry..." styleClass="monitored-path-item"/>
+        </VBox>
+    </VBox>
 
 </VBox>
