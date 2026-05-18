@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * <p>Redesigned to present a high-contrast real-time Threat surveillance dashboard
  * with live telemetry updates, monitoring targets, active rules list, dynamic host target adding,
- * and a scrolling live Security Operations Terminal log feed.
+ * asynchronous Threat Simulation Studio, and a scrolling live Security Operations Terminal log feed.
  */
 public final class OverviewController {
 
@@ -135,7 +135,7 @@ public final class OverviewController {
     }
 
     /**
-     * Action handler to dynamically add any folder on the computer to recursive surveillance watch.
+     * Action handler to dynamically add any folder on the computer to active surveillance.
      */
     @FXML
     public void onAddPath() {
@@ -161,6 +161,175 @@ public final class OverviewController {
             log.error("Failed to dynamically add surveillance target path", e);
             appendLog("[ERROR] Failed to dynamically register path: " + e.getMessage());
         }
+    }
+
+    /**
+     * Action handler to simulate a rapid modification (ransomware encryption pattern) attack.
+     */
+    @FXML
+    public void onSimulateRansom() {
+        runSimulationInBackground("Ransomware Simulation", () -> {
+            try {
+                Path sandbox = getSandboxPath();
+                Platform.runLater(() -> appendLog("[SIMULATION] 💥 STARTING virtual Ransomware attack simulation in: " + sandbox.toAbsolutePath()));
+
+                // Create decoy files
+                for (int i = 1; i <= 6; i++) {
+                    Path file = sandbox.resolve("decoy_ransom_" + i + ".txt");
+                    java.nio.file.Files.writeString(file, "FileX safe decoy data block " + System.currentTimeMillis());
+                }
+
+                // Rapidly mutate decoy files
+                for (int i = 1; i <= 6; i++) {
+                    Path file = sandbox.resolve("decoy_ransom_" + i + ".txt");
+                    java.nio.file.Files.writeString(file, "MUTATED AND LOCKED ENCRYPTION payload - " + System.currentTimeMillis());
+                    Thread.sleep(15);
+                }
+                Platform.runLater(() -> appendLog("[SIMULATION] ✅ Ransomware attack pattern payload deployed. Evaluating detection correlation..."));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Action handler to simulate a mass file deletion attack.
+     */
+    @FXML
+    public void onSimulateMassDelete() {
+        runSimulationInBackground("Mass Deletion Simulation", () -> {
+            try {
+                Path sandbox = getSandboxPath();
+                Platform.runLater(() -> appendLog("[SIMULATION] 🗑️ STARTING virtual Mass Deletion attack simulation in: " + sandbox.toAbsolutePath()));
+
+                // Create decoy files
+                for (int i = 1; i <= 6; i++) {
+                    Path file = sandbox.resolve("decoy_delete_" + i + ".log");
+                    java.nio.file.Files.writeString(file, "mock deletion logs");
+                }
+
+                Thread.sleep(150); // let watcher register creations first
+
+                // Rapidly delete decoy files
+                for (int i = 1; i <= 6; i++) {
+                    Path file = sandbox.resolve("decoy_delete_" + i + ".log");
+                    java.nio.file.Files.deleteIfExists(file);
+                    Thread.sleep(15);
+                }
+                Platform.runLater(() -> appendLog("[SIMULATION] ✅ Mass Deletion pattern deployed. Evaluating detection correlation..."));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Action handler to simulate a ransomware extension renaming attack.
+     */
+    @FXML
+    public void onSimulateRename() {
+        runSimulationInBackground("Extension Lock Simulation", () -> {
+            try {
+                Path sandbox = getSandboxPath();
+                Platform.runLater(() -> appendLog("[SIMULATION] 🔄 STARTING Extension Renaming lock simulation in: " + sandbox.toAbsolutePath()));
+
+                Path srcFile = sandbox.resolve("confidential_budget.xlsx");
+                java.nio.file.Files.writeString(srcFile, "High value financial sheets.");
+
+                Thread.sleep(100);
+
+                Path dstFile = sandbox.resolve("confidential_budget.locked");
+                java.nio.file.Files.move(srcFile, dstFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                Platform.runLater(() -> appendLog("[SIMULATION] ✅ Suspicious Extension Rename deployed. Evaluating detection correlation..."));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Action handler to simulate a hidden file creation attack.
+     */
+    @FXML
+    public void onSimulateHidden() {
+        runSimulationInBackground("Hidden File Simulation", () -> {
+            try {
+                Path sandbox = getSandboxPath();
+                Platform.runLater(() -> appendLog("[SIMULATION] 🕵️ STARTING Stealthy Hidden Payload simulation in: " + sandbox.toAbsolutePath()));
+
+                Path hiddenFile = sandbox.resolve(".hidden_rootkit_descriptor");
+                java.nio.file.Files.writeString(hiddenFile, "Stealth kernel module mock payload.");
+
+                Platform.runLater(() -> appendLog("[SIMULATION] ✅ Stealthy Hidden File created. Evaluating detection correlation..."));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Action handler to simulate a sensitive directory activity attack.
+     */
+    @FXML
+    public void onSimulateSensitive() {
+        runSimulationInBackground("Sensitive Access Simulation", () -> {
+            try {
+                Path sandbox = getSandboxPath();
+                Platform.runLater(() -> appendLog("[SIMULATION] 🔑 STARTING Sensitive Configuration Tamper simulation in: " + sandbox.toAbsolutePath()));
+
+                Path sensitiveDir = sandbox.resolve(".ssh");
+                if (!java.nio.file.Files.exists(sensitiveDir)) {
+                    java.nio.file.Files.createDirectories(sensitiveDir);
+                }
+
+                Path configFile = sensitiveDir.resolve("authorized_keys");
+                java.nio.file.Files.writeString(configFile, "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8... mock");
+
+                Platform.runLater(() -> appendLog("[SIMULATION] ✅ Sensitive Directory Activity pattern deployed. Evaluating detection correlation..."));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * Helper to get or create a sandbox directory in the first monitored root.
+     */
+    private Path getSandboxPath() throws Exception {
+        Set<Path> monitoredRoots = appContext.monitoringEngine().getMonitoredRoots();
+        if (monitoredRoots.isEmpty()) {
+            throw new IllegalStateException("No target directories registered. Please register at least one target path first using '+ Add Target'!");
+        }
+        Path firstRoot = monitoredRoots.iterator().next();
+        Path sandbox = firstRoot.resolve("filex_sandbox");
+        if (!java.nio.file.Files.exists(sandbox)) {
+            java.nio.file.Files.createDirectories(sandbox);
+        }
+        return sandbox;
+    }
+
+    /**
+     * Helper to execute virtual threat operations safely in the background.
+     */
+    private void runSimulationInBackground(String name, Runnable runnable) {
+        new Thread(() -> {
+            try {
+                runnable.run();
+            } catch (IllegalStateException e) {
+                Platform.runLater(() -> {
+                    appendLog("[ALERT] ❌ SIMULATION BLOCKED: " + e.getMessage());
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+                    alert.setTitle("Simulation Blocked");
+                    alert.setHeaderText("Surveillance Target Required");
+                    alert.setContentText(e.getMessage());
+                    alert.showAndWait();
+                });
+            } catch (Exception e) {
+                log.error("Simulation run failed: " + name, e);
+                Platform.runLater(() -> appendLog("[ERROR] " + name + " failed: " + e.getMessage()));
+            }
+        }).start();
     }
 
     /**
