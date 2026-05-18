@@ -5,6 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <VBox fx:id="evidenceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.filex.controller.EvidenceController"
       spacing="15" style="-fx-padding: 20;">
     
     <!-- Header -->
@@ -38,6 +39,7 @@
             <Label text="Evidence Details" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
             <TextArea fx:id="evidenceDetailArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
                       style="-fx-font-family: monospace;"/>
+            <Button fx:id="traverseButton" text="Traverse Related Evidence" disable="true" maxWidth="Infinity"/>
         </VBox>
         
     </SplitPane>
