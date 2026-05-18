@@ -337,10 +337,10 @@ public final class InvestigationWorkspaceController {
 
                 // Color-code by severity
                 String style = switch (incident.getSeverity()) {
-                    case "CRITICAL" -> "-fx-text-fill: #d32f2f;";
-                    case "HIGH" -> "-fx-text-fill: #f57c00;";
-                    case "MEDIUM" -> "-fx-text-fill: #fbc02d;";
-                    case "LOW" -> "-fx-text-fill: #388e3c;";
+                    case "CRITICAL" -> "-fx-text-fill: #ff5a6a;";
+                    case "HIGH" -> "-fx-text-fill: #ff9b50;";
+                    case "MEDIUM" -> "-fx-text-fill: #ffe066;";
+                    case "LOW" -> "-fx-text-fill: #4ade80;";
                     default -> "";
                 };
                 setStyle(style);

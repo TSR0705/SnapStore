@@ -67,6 +67,11 @@
    Typography & Headers
    ============================================================================ */
 
+/* Global Label Override for Dark Themes */
+.label {
+    -fx-text-fill: -color-text;
+}
+
 .app-title {
     -fx-font-size: 26px;
     -fx-font-weight: 900;
