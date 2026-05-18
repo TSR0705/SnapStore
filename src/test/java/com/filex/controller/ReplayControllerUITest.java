@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith({ApplicationExtension.class, MockitoExtension.class})
+@ExtendWith({ ApplicationExtension.class, MockitoExtension.class })
 public class ReplayControllerUITest {
 
     static {
@@ -101,11 +101,13 @@ public class ReplayControllerUITest {
                 List.of(event1), Instant.now(), Instant.now(), 0, 500, 1, false);
 
         Platform.runLater(() -> {
-            // ReplayController.displayReplay is private, but it gets called via the callback from replayFromCheckpointAsync
+            // ReplayController.displayReplay is private, but it gets called via the
+            // callback from replayFromCheckpointAsync
             // In the test, we'll capture the callback
         });
-        
-        // Instead of capturing, let's just make sure the mock captures the success callback
+
+        // Instead of capturing, let's just make sure the mock captures the success
+        // callback
         doAnswer(invocation -> {
             Consumer<ReplayNavigationService.ReplayWindow> onSuccess = invocation.getArgument(1);
             onSuccess.accept(window);

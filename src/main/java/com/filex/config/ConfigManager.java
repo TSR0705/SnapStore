@@ -64,11 +64,12 @@ public final class ConfigManager {
         Path logsDir = appHome.resolve("logs");
         Path dataDir = appHome.resolve("data");
         Path configDir = appHome.resolve("config");
-        Path databaseFile = dataDir.resolve(AppConfig.DB_FILENAME);
 
         boolean debugMode = resolveDebugMode();
         boolean demoMode = resolveDemoMode();
         Path demoMonitorPath = resolveDemoMonitorPath();
+        boolean validationMode = resolveValidationMode();
+        Path databaseFile = validationMode ? dataDir.resolve("filex-validation.db") : dataDir.resolve(AppConfig.DB_FILENAME);
 
         ensureDirectory(appHome);
         ensureDirectory(logsDir);
@@ -86,7 +87,8 @@ public final class ConfigManager {
                 debugMode,
                 demoMode,
                 demoMonitorPath,
-                resolveDemoAutoCreatePath()
+                resolveDemoAutoCreatePath(),
+                validationMode
         );
 
         log.info(config.summary());
@@ -158,6 +160,14 @@ public final class ConfigManager {
             return "true".equalsIgnoreCase(autoCreateEnv.trim());
         }
         return "true".equalsIgnoreCase(System.getProperty("filex.demo.autoCreatePath", "true"));
+    }
+
+    private static boolean resolveValidationMode() {
+        String validationEnv = System.getenv("FILEX_VALIDATION_MODE");
+        if (validationEnv != null) {
+            return "true".equalsIgnoreCase(validationEnv.trim());
+        }
+        return "true".equalsIgnoreCase(System.getProperty("filex.validation.mode", "false"));
     }
 
     private static void ensureDirectory(Path path) {

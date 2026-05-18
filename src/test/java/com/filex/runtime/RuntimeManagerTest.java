@@ -7,6 +7,7 @@ import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
 import com.filex.event.RuntimeState;
+import com.filex.validation.ValidationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,19 +32,24 @@ public class RuntimeManagerTest {
     private DetectionEngine detectionEngine;
     private AlertEngine alertEngine;
     private IncidentPersistenceSubscriber persistenceSubscriber;
+    private ValidationService validationService;
     private RuntimeManager runtimeManager;
+
+    private com.filex.database.DatabaseManager databaseManager;
 
     @BeforeEach
     void setUp() {
         config = mock(AppConfig.class);
+        databaseManager = mock(com.filex.database.DatabaseManager.class);
         eventBus = mock(EventBus.class);
         monitoringEngine = mock(MonitoringEngine.class);
         detectionEngine = mock(DetectionEngine.class);
         alertEngine = mock(AlertEngine.class);
         persistenceSubscriber = mock(IncidentPersistenceSubscriber.class);
 
+        validationService = mock(ValidationService.class);
         runtimeManager = new RuntimeManager(
-                config, eventBus, monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber
+                config, databaseManager, eventBus, monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber, validationService
         );
     }
 

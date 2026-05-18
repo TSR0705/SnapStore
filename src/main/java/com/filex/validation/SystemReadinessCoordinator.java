@@ -109,7 +109,8 @@ public final class SystemReadinessCoordinator {
         boolean detectionReady = detectionEngine.getState() == com.filex.detection.DetectionState.RUNNING;
         boolean alertReady = alertEngine.getState() == com.filex.alert.AlertState.RUNNING;
         boolean persistenceReady = persistenceSubscriber.isStarted();
-        boolean eventBusReady = !eventBus.getMetrics().isShutdown();
+        com.filex.event.EventBusMetrics metrics = eventBus.getMetrics();
+        boolean eventBusReady = !metrics.isShutdown() && metrics.getActiveDispatcherThreads() > 0 && metrics.getQueueCapacity() > 0;
 
         boolean allReady = monitoringReady && detectionReady && alertReady && persistenceReady && eventBusReady;
 

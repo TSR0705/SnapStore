@@ -297,7 +297,8 @@ class PersistenceFixesValidationTest {
                 base.debugMode(),
                 base.demoMode(),
                 base.demoMonitorPath(),
-                base.demoAutoCreatePath()
+                base.demoAutoCreatePath(),
+                base.validationMode()
         );
     }
 }

@@ -6,8 +6,11 @@ import com.filex.config.AppConfig;
 import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
+import com.filex.event.EventBusMetrics;
 import com.filex.event.RuntimeState;
 import com.filex.event.RuntimeStateChangedEvent;
+import com.filex.validation.ValidationService;
+import com.filex.database.DatabaseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,11 +37,13 @@ public final class RuntimeManager {
     private static final Logger log = LoggerFactory.getLogger(RuntimeManager.class);
 
     private final AppConfig config;
+    private final DatabaseManager databaseManager;
     private final EventBus eventBus;
     private final MonitoringEngine monitoringEngine;
     private final DetectionEngine detectionEngine;
     private final AlertEngine alertEngine;
     private final IncidentPersistenceSubscriber persistenceSubscriber;
+    private final ValidationService validationService;
 
     private volatile RuntimeState currentState;
 
@@ -47,18 +52,22 @@ public final class RuntimeManager {
 
     public RuntimeManager(
             AppConfig config,
+            DatabaseManager databaseManager,
             EventBus eventBus,
             MonitoringEngine monitoringEngine,
             DetectionEngine detectionEngine,
             AlertEngine alertEngine,
-            IncidentPersistenceSubscriber persistenceSubscriber
+            IncidentPersistenceSubscriber persistenceSubscriber,
+            ValidationService validationService
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
+        this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus must not be null");
         this.monitoringEngine = Objects.requireNonNull(monitoringEngine, "monitoringEngine must not be null");
         this.detectionEngine = Objects.requireNonNull(detectionEngine, "detectionEngine must not be null");
         this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
         this.persistenceSubscriber = Objects.requireNonNull(persistenceSubscriber, "persistenceSubscriber must not be null");
+        this.validationService = Objects.requireNonNull(validationService, "validationService must not be null");
         
         this.currentState = RuntimeState.INITIALIZING;
         log.info("RuntimeManager initialized in state: {}", currentState);
@@ -77,9 +86,29 @@ public final class RuntimeManager {
         log.info("Executing engine startup sequence...");
 
         try {
+            // 0. Gated pre-start validation reset (startup-only)
+            if (config.validationMode()) {
+                log.info("Validation mode enabled. Initiating pre-start truth reset...");
+                com.filex.validation.TruthValidationCoordinator.runPreStartReset(
+                        config,
+                        databaseManager,
+                        eventBus,
+                        monitoringEngine,
+                        detectionEngine,
+                        alertEngine,
+                        persistenceSubscriber
+                );
+            }
+
             // 1. Ensure persistence subscriber is started first to catch all subsequent events
             persistenceSubscriber.start();
             log.info("Persistence subscriber activated.");
+
+            // 1.5. Start validation service if configured so it can observe end-to-end flow.
+            if (config.validationMode()) {
+                validationService.start();
+                log.info("Validation service activated.");
+            }
 
             // 2. Start Detection Engine
             detectionEngine.start();
@@ -98,6 +127,28 @@ public final class RuntimeManager {
 
             transitionTo(RuntimeState.RUNNING);
             log.info("FileX engines started successfully.");
+
+            // 5. Signal readiness in validation mode
+            if (config.validationMode()) {
+                String validationRunId = org.slf4j.MDC.get(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
+                if (validationRunId == null) {
+                    validationRunId = "unknown";
+                }
+                
+                // Publish ValidationResetEvent only after transition to RUNNING is complete,
+                // guaranteeing subscribers/UI are fully active and listening.
+                eventBus.publish(new com.filex.event.ValidationResetEvent("RuntimeManager", validationRunId));
+
+                com.filex.validation.SystemReadinessCoordinator readinessCoordinator =
+                        new com.filex.validation.SystemReadinessCoordinator(
+                                monitoringEngine,
+                                detectionEngine,
+                                alertEngine,
+                                persistenceSubscriber,
+                                eventBus
+                        );
+                readinessCoordinator.checkAndSignalReadiness();
+            }
 
         } catch (Exception e) {
             log.error("Engine startup sequence failed: {}", e.getMessage(), e);
@@ -128,7 +179,13 @@ public final class RuntimeManager {
             alertEngine.stop();
             log.info("Alert engine stopped.");
 
-            // 3. Stop persistence subscriber last
+            // 3. Stop validation service after event processing so final flow can be observed.
+            if (config.validationMode()) {
+                validationService.stop();
+                log.info("Validation service stopped.");
+            }
+
+            // 4. Stop persistence subscriber last
             persistenceSubscriber.stop();
             log.info("Persistence subscriber stopped.");
 
@@ -189,7 +246,8 @@ public final class RuntimeManager {
                 monitoringEngine.getState().toString(),
                 detectionEngine.getState().toString(),
                 alertEngine.getState().toString(),
-                persistenceSubscriber.isStarted() ? "RUNNING" : "STOPPED"
+                persistenceSubscriber.isStarted() ? "RUNNING" : "STOPPED",
+                config.validationMode() && validationService.isStarted() ? "RUNNING" : "DISABLED"
         );
     }
 
@@ -209,6 +267,8 @@ public final class RuntimeManager {
                 aMetrics.getTotalIncidentsCreated(),
                 dbWriteFailures.get(),
                 mMetrics.getActiveWatchCount(),
+                eventBus.getMetrics(),
+                config.validationMode() && validationService.isStarted(),
                 currentState
         );
     }
@@ -227,7 +287,8 @@ public final class RuntimeManager {
             String monitoringState,
             String detectionState,
             String alertState,
-            String persistenceState
+            String persistenceState,
+            String validationState
     ) {}
 
     /** Metrics snapshot record. */
@@ -239,6 +300,8 @@ public final class RuntimeManager {
             long incidentsCreated,
             long dbWriteFailures,
             int activeMonitoredPaths,
+            EventBusMetrics eventBusMetrics,
+            boolean validationModeActive,
             RuntimeState currentState
     ) {}
 }

@@ -366,31 +366,48 @@ public final class EventBus {
         int successCount = 0;
         int failureCount = 0;
         
-        for (Consumer handler : handlers) {
-            try {
-                handler.accept(event);
-                successCount++;
-                log.info(com.filex.validation.TruthMarkers.TRUTH,
-                        "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=success",
-                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
-                        sanitize(handler.getClass().getSimpleName()));
-                log.trace(com.filex.validation.TruthMarkers.TRUTH,
-                        "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=success",
-                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
-                        sanitize(handler.getClass().getSimpleName()));
-            } catch (Exception e) {
-                failureCount++;
-                totalDispatchFailures.incrementAndGet();
-                log.error("Subscriber threw exception handling event [{}]: {}",
-                        event.getClass().getSimpleName(), e.getMessage(), e);
-                log.info(com.filex.validation.TruthMarkers.TRUTH,
-                        "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=failure err={}",
-                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
-                        sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
-                log.error(com.filex.validation.TruthMarkers.TRUTH,
-                        "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=failure err={}",
-                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
-                        sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
+        // Propagate MDC correlation identifier across thread boundary
+        String eventCorrelationId = event.correlationId();
+        String oldMdcId = org.slf4j.MDC.get(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
+        try {
+            if (eventCorrelationId != null) {
+                org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, eventCorrelationId);
+            } else if (oldMdcId != null) {
+                org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, oldMdcId);
+            }
+
+            for (Consumer handler : handlers) {
+                try {
+                    handler.accept(event);
+                    successCount++;
+                    log.info(com.filex.validation.TruthMarkers.TRUTH,
+                            "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=success",
+                            sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                            sanitize(handler.getClass().getSimpleName()));
+                    log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                            "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=success",
+                            sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                            sanitize(handler.getClass().getSimpleName()));
+                } catch (Exception e) {
+                    failureCount++;
+                    totalDispatchFailures.incrementAndGet();
+                    log.error("Subscriber threw exception handling event [{}]: {}",
+                            event.getClass().getSimpleName(), e.getMessage(), e);
+                    log.info(com.filex.validation.TruthMarkers.TRUTH,
+                            "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=failure err={}",
+                            sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                            sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
+                    log.error(com.filex.validation.TruthMarkers.TRUTH,
+                            "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=failure err={}",
+                            sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                            sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
+                }
+            }
+        } finally {
+            if (oldMdcId != null) {
+                org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, oldMdcId);
+            } else {
+                org.slf4j.MDC.remove(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
             }
         }
         

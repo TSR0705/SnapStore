@@ -269,7 +269,16 @@ public final class AlertEngine {
             try {
                 DetectionEvent detection = processingQueue.poll(100, TimeUnit.MILLISECONDS);
                 if (detection != null) {
-                    processDetection(detection);
+                    // Propagate MDC validation run identifier across worker thread boundaries
+                    String correlationId = detection.correlationId();
+                    try {
+                        if (correlationId != null) {
+                            org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, correlationId);
+                        }
+                        processDetection(detection);
+                    } finally {
+                        org.slf4j.MDC.remove(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
+                    }
                 }
             } catch (InterruptedException e) {
                 log.debug("Processing thread interrupted");
@@ -291,13 +300,15 @@ public final class AlertEngine {
                 san(detection.eventId()), san(detection.ruleName()), san(detection.severity()));
 
         try {
+            long correlationLatencyMs = java.time.Duration.between(detection.occurredAt(), java.time.Instant.now()).toMillis();
+            
             // Check suppression first
             if (suppressionEngine.shouldSuppress(detection)) {
                 totalAlertsSuppressed.incrementAndGet();
                 log.debug("Alert suppressed: {}", detection.ruleName());
                 log.info(TruthMarkers.TRUTH,
-                        "TRUTH stage=Alert action=detection_evaluated detectionId={} result=suppressed reason=duplicate",
-                        san(detection.eventId()));
+                        "TRUTH stage=Alert action=detection_evaluated detectionId={} result=suppressed reason=duplicate correlationLatencyMs={}",
+                        san(detection.eventId()), correlationLatencyMs);
                 log.debug(TruthMarkers.TRUTH,
                         "component=AlertEngine event=detection_suppressed detectionId={} reason=duplicate",
                         san(detection.eventId()));
@@ -309,8 +320,8 @@ public final class AlertEngine {
 
             if (correlatedIncidentId != null) {
                 log.info(TruthMarkers.TRUTH,
-                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=merge incidentId={}",
-                        san(detection.eventId()), san(correlatedIncidentId));
+                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=merge incidentId={} correlationLatencyMs={}",
+                        san(detection.eventId()), san(correlatedIncidentId), correlationLatencyMs);
                 log.debug(TruthMarkers.TRUTH,
                         "component=AlertEngine event=correlation_decision detectionId={} outcome=match incidentId={}",
                         san(detection.eventId()), san(correlatedIncidentId));
@@ -318,8 +329,8 @@ public final class AlertEngine {
                 mergeDetectionIntoIncident(correlatedIncidentId, detection);
             } else {
                 log.info(TruthMarkers.TRUTH,
-                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=create",
-                        san(detection.eventId()));
+                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=create correlationLatencyMs={}",
+                        san(detection.eventId()), correlationLatencyMs);
                 log.debug(TruthMarkers.TRUTH,
                         "component=AlertEngine event=correlation_decision detectionId={} outcome=new",
                         san(detection.eventId()));

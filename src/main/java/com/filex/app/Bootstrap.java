@@ -110,8 +110,14 @@ public final class Bootstrap {
                     new IncidentPersistenceSubscriber(eventBus, incidentPersistenceService);
             log.info("Incident persistence subscriber created.");
 
-            // Step 9: Create investigation services
-            log.info("[9/11] Creating investigation services...");
+            // Step 9: Create validation service
+            log.info("[9/11] Creating validation service...");
+            com.filex.validation.ValidationService validationService = 
+                    new com.filex.validation.ValidationService(eventBus);
+            log.info("Validation service created.");
+
+            // Step 10: Create investigation services
+            log.info("[10/11] Creating investigation services...");
             InvestigationQueryService queryService = databaseManager.investigationQueryService();
             InvestigationMetrics investigationMetrics = new InvestigationMetrics();
             ReplayNavigationService replayService = databaseManager.replayNavigationService(investigationMetrics);
@@ -127,7 +133,8 @@ public final class Bootstrap {
             // Create AppContext with core infrastructure (no ViewManager/WorkspaceService yet)
             AppContext appContext = new AppContext(config, databaseManager, eventBus, 
                     monitoringEngine, detectionEngine, alertEngine,
-                    incidentPersistenceService, incidentPersistenceSubscriber);
+                    incidentPersistenceService, incidentPersistenceSubscriber,
+                    validationService);
             
             // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);
