@@ -427,7 +427,10 @@ class Phase1HComprehensiveAuditTest {
                 dbPath,
                 base.appName(),
                 base.appVersion(),
-                base.debugMode()
+                base.debugMode(),
+                base.demoMode(),
+                base.demoMonitorPath(),
+                base.demoAutoCreatePath()
         );
     }
 }
