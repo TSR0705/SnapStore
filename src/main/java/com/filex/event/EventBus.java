@@ -113,7 +113,13 @@ public final class EventBus {
         if (handler == null)   throw new IllegalArgumentException("handler must not be null");
 
         subscribers.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(handler);
+        
+        int subscriberCount = subscribers.get(eventType).size();
         log.debug("Subscribed {} to {}", handler.getClass().getSimpleName(), eventType.getSimpleName());
+        log.debug(com.filex.validation.TruthMarkers.TRUTH,
+                "component=EventBus event=subscriber_registered eventType={} handlerClass={} totalSubscribers={}",
+                sanitize(eventType.getSimpleName()), sanitize(handler.getClass().getSimpleName()),
+                subscriberCount);
     }
 
     /**
@@ -147,8 +153,17 @@ public final class EventBus {
         if (event == null) throw new IllegalArgumentException("event must not be null");
 
         totalPublishedEvents.incrementAndGet();
+        
+        int subscriberCount = subscriberCount(event.getClass());
         log.debug("Publishing event (sync): {}", event);
+        log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                "component=EventBus event=event_published mode=sync eventType={} eventId={} subscriberCount={}",
+                sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()), subscriberCount);
+        
         dispatchToSubscribers(event);
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "TRUTH stage=EventBus action=publish_sync eventType={} eventId={} result=success",
+                sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
     }
 
     /**
@@ -170,6 +185,9 @@ public final class EventBus {
         totalAsyncEvents.incrementAndGet();
         log.debug("Publishing event (async): {}", event);
         asyncQueue.put(event); // Blocks if queue is full
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "TRUTH stage=EventBus action=publish_async eventType={} eventId={} result=success",
+                sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
     }
 
     /**
@@ -187,10 +205,23 @@ public final class EventBus {
         if (queued) {
             totalPublishedEvents.incrementAndGet();
             totalAsyncEvents.incrementAndGet();
+            int subscriberCount = subscriberCount(event.getClass());
             log.debug("Publishing event (async): {}", event);
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "TRUTH stage=EventBus action=publish_async eventType={} eventId={} result=success",
+                    sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
+            log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=EventBus event=event_published mode=async eventType={} eventId={} subscriberCount={} queued=true",
+                    sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()), subscriberCount);
         } else {
             totalDroppedEvents.incrementAndGet();
             log.warn("Async queue full, event dropped: {}", event.getClass().getSimpleName());
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "TRUTH stage=EventBus action=publish_async eventType={} eventId={} result=failure reason=queue_full",
+                    sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
+            log.warn(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=EventBus event=event_dropped mode=async eventType={} eventId={} reason=queue_full",
+                    sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
         }
         return queued;
     }
@@ -321,19 +352,70 @@ public final class EventBus {
         CopyOnWriteArrayList<Consumer> handlers = subscribers.get(event.getClass());
         if (handlers == null || handlers.isEmpty()) {
             log.trace("No subscribers for event type: {}", event.getClass().getSimpleName());
+            log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=EventBus event=no_subscribers eventType={} eventId={}",
+                    sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()));
             return;
         }
 
         log.trace("Dispatching event to {} subscriber(s): {}", handlers.size(), event.getClass().getSimpleName());
+        log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                "component=EventBus event=dispatch_started eventType={} eventId={} subscriberCount={}",
+                sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()), handlers.size());
 
+        int successCount = 0;
+        int failureCount = 0;
+        
         for (Consumer handler : handlers) {
             try {
                 handler.accept(event);
+                successCount++;
+                log.info(com.filex.validation.TruthMarkers.TRUTH,
+                        "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=success",
+                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                        sanitize(handler.getClass().getSimpleName()));
+                log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                        "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=success",
+                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                        sanitize(handler.getClass().getSimpleName()));
             } catch (Exception e) {
+                failureCount++;
                 totalDispatchFailures.incrementAndGet();
                 log.error("Subscriber threw exception handling event [{}]: {}",
                         event.getClass().getSimpleName(), e.getMessage(), e);
+                log.info(com.filex.validation.TruthMarkers.TRUTH,
+                        "TRUTH stage=EventBus action=dispatch_subscriber eventType={} eventId={} subscriber={} result=failure err={}",
+                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                        sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
+                log.error(com.filex.validation.TruthMarkers.TRUTH,
+                        "component=EventBus event=subscriber_dispatched eventType={} eventId={} subscriber={} outcome=failure err={}",
+                        sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()),
+                        sanitize(handler.getClass().getSimpleName()), sanitize(e.getMessage()));
             }
         }
+        
+        log.trace(com.filex.validation.TruthMarkers.TRUTH,
+                "component=EventBus event=dispatch_completed eventType={} eventId={} successCount={} failureCount={}",
+                sanitize(event.getClass().getSimpleName()), sanitize(event.eventId()), successCount, failureCount);
+    }
+
+    /**
+     * Sanitizes a value for structured logging.
+     */
+    private static String sanitize(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        String s = value.toString();
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (Character.isWhitespace(c) || Character.isISOControl(c)) {
+                sb.append('_');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }
