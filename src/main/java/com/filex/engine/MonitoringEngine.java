@@ -324,6 +324,7 @@ public final class MonitoringEngine {
      * Processes a single WatchEvent from the WatchService.
      */
     private void processWatchEvent(Path dir, WatchEvent<?> event) {
+        log.info("Watch event received: {} in directory: {}", event.kind(), dir);
         totalEventsDetected.incrementAndGet();
 
         WatchEvent.Kind<?> kind = event.kind();
