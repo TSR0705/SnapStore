@@ -363,3 +363,40 @@
     -fx-padding: 4 0 4 0;
 }
 
+.security-terminal {
+    -fx-control-inner-background: #080b11;
+    -fx-text-fill: #00ff66;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 12.5px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+}
+
+.rules-list-container {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 16;
+}
+
+.rule-item {
+    -fx-font-size: 12px;
+    -fx-padding: 4 0 4 0;
+}
+
+.rule-name {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text;
+}
+
+.rule-status-active {
+    -fx-text-fill: -color-success;
+    -fx-font-weight: bold;
+}
+
+

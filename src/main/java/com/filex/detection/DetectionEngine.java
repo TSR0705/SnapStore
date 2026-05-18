@@ -204,6 +204,13 @@ public final class DetectionEngine {
     }
 
     /**
+     * Returns an unmodifiable list of all registered detection rules.
+     */
+    public List<DetectionRule> getRules() {
+        return Collections.unmodifiableList(rules);
+    }
+
+    /**
      * Returns a snapshot of detection metrics.
      */
     public DetectionMetrics getMetrics() {

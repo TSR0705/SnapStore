@@ -3,67 +3,99 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 
-<VBox xmlns="http://javafx.com/javafx/21"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.filex.controller.OverviewController"
-      spacing="24" alignment="TOP_LEFT"
-      styleClass="view-container">
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.filex.controller.OverviewController"
+            fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+            styleClass="view-container">
 
-    <padding>
-        <Insets top="32" right="32" bottom="32" left="32"/>
-    </padding>
+    <content>
+        <VBox spacing="24" alignment="TOP_LEFT">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
 
-    <!-- Header Section -->
-    <VBox spacing="4">
-        <Label fx:id="lblAppName" styleClass="view-title" text="FileX Threat Intel"/>
-        <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Surveillance Dashboard Active"/>
-    </VBox>
+            <!-- Header Section -->
+            <VBox spacing="4">
+                <Label fx:id="lblAppName" styleClass="view-title" text="FileX Threat Intel"/>
+                <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Surveillance Dashboard Active"/>
+            </VBox>
 
-    <Separator/>
+            <Separator/>
 
-    <!-- Dashboard Cards Grid -->
-    <GridPane styleClass="dashboard-grid" hgap="20" vgap="20">
-        <columnConstraints>
-            <ColumnConstraints percentWidth="50.0" />
-            <ColumnConstraints percentWidth="50.0" />
-        </columnConstraints>
+            <!-- Dashboard Cards Grid -->
+            <GridPane styleClass="dashboard-grid" hgap="20" vgap="20">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50.0" />
+                    <ColumnConstraints percentWidth="50.0" />
+                </columnConstraints>
 
-        <!-- Protection Status Card -->
-        <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="0" spacing="10">
-            <Label text="Engine Status" styleClass="kpi-title"/>
-            <Label fx:id="lblStatus" text="ACTIVE" styleClass="kpi-value, kpi-value-active"/>
+                <!-- Protection Status Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="0" spacing="10">
+                    <Label text="Engine Status" styleClass="kpi-title"/>
+                    <Label fx:id="lblStatus" text="ACTIVE" styleClass="kpi-value, kpi-value-active"/>
+                </VBox>
+
+                <!-- Events Processed Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="0" spacing="10">
+                    <Label text="Raw Events Normalized" styleClass="kpi-title"/>
+                    <Label fx:id="lblEvents" text="0" styleClass="kpi-value, kpi-value-accent"/>
+                </VBox>
+
+                <!-- Active Incidents Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="1" spacing="10">
+                    <Label text="Total Security Incidents" styleClass="kpi-title"/>
+                    <Label fx:id="lblIncidents" text="0" styleClass="kpi-value, kpi-value-danger"/>
+                </VBox>
+
+                <!-- Monitored Folders Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="1" spacing="10">
+                    <Label text="Monitored Folders" styleClass="kpi-title"/>
+                    <Label fx:id="lblPathCount" text="0" styleClass="kpi-value, kpi-value-warning"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Middle Dual-Column Section -->
+            <GridPane hgap="24" vgap="16">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50.0"/>
+                    <ColumnConstraints percentWidth="50.0"/>
+                </columnConstraints>
+
+                <!-- Left Column: Monitored Locations -->
+                <VBox spacing="10" GridPane.columnIndex="0">
+                    <Label text="Actively Monitored Targets" styleClass="dashboard-section-title"/>
+                    <VBox fx:id="vboxPaths" spacing="8" styleClass="path-list-container">
+                        <!-- Dynamically populated -->
+                        <Label text="Acquiring host directory telemetry..." styleClass="monitored-path-item"/>
+                    </VBox>
+                </VBox>
+
+                <!-- Right Column: Loaded Threat Detection Rules -->
+                <VBox spacing="10" GridPane.columnIndex="1">
+                    <Label text="Active Threat Detection Rules" styleClass="dashboard-section-title"/>
+                    <VBox fx:id="vboxRules" spacing="8" styleClass="rules-list-container">
+                        <!-- Dynamically populated -->
+                        <Label text="Loading rule matrix..." styleClass="monitored-path-item"/>
+                    </VBox>
+                </VBox>
+            </GridPane>
+
+            <Separator/>
+
+            <!-- Bottom Span: Live Security Console Terminal Log -->
+            <VBox spacing="10">
+                <Label text="Live Security Console Event Feed" styleClass="dashboard-section-title"/>
+                <TextArea fx:id="txtTerminalLog" editable="false" wrapText="true"
+                          prefHeight="180" minHeight="120" styleClass="security-terminal"
+                          text="[SYSTEM] Live Cybersecurity Console stream initialized. Monitoring filesystem operations...&#10;"/>
+            </VBox>
         </VBox>
-
-        <!-- Events Processed Card -->
-        <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="0" spacing="10">
-            <Label text="Raw Events Normalized" styleClass="kpi-title"/>
-            <Label fx:id="lblEvents" text="0" styleClass="kpi-value, kpi-value-accent"/>
-        </VBox>
-
-        <!-- Active Incidents Card -->
-        <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="1" spacing="10">
-            <Label text="Total Security Incidents" styleClass="kpi-title"/>
-            <Label fx:id="lblIncidents" text="0" styleClass="kpi-value, kpi-value-danger"/>
-        </VBox>
-
-        <!-- Monitored Folders Card -->
-        <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="1" spacing="10">
-            <Label text="Monitored Folders" styleClass="kpi-title"/>
-            <Label fx:id="lblPathCount" text="0" styleClass="kpi-value, kpi-value-warning"/>
-        </VBox>
-    </GridPane>
-
-    <!-- Active Monitored Directories -->
-    <VBox spacing="10">
-        <Label text="Actively Monitored Paths" styleClass="dashboard-section-title"/>
-        <VBox fx:id="vboxPaths" spacing="8" styleClass="path-list-container">
-            <!-- Dynamically populated at runtime -->
-            <Label text="Acquiring host directory telemetry..." styleClass="monitored-path-item"/>
-        </VBox>
-    </VBox>
-
-</VBox>
+    </content>
+</ScrollPane>
