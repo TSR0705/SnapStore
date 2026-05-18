@@ -32,22 +32,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith({ ApplicationExtension.class, MockitoExtension.class })
+@ExtendWith(ApplicationExtension.class)
 public class ReplayControllerUITest {
 
-    static {
-        System.setProperty("testfx.robot", "glass");
-        System.setProperty("testfx.headless", "true");
-        System.setProperty("prism.order", "sw");
-        System.setProperty("prism.text", "t2k");
-        System.setProperty("java.awt.headless", "true");
-    }
-
-    @Mock
-    private AppContext appContext;
-
-    @Mock
-    private WorkspaceService workspaceService;
+    private final AppContext appContext = mock(AppContext.class);
+    private final WorkspaceService workspaceService = mock(WorkspaceService.class);
 
     private ReplayController controller;
 
