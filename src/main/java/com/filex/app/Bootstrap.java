@@ -68,73 +68,66 @@ public final class Bootstrap {
 
         try {
             // Step 1: Resolve configuration
-            log.info("[1/11] Resolving configuration...");
+            log.info("[1/10] Resolving configuration...");
             AppConfig config = ConfigManager.resolve();
             log.info("Configuration resolved: {}", config.summary());
 
             // Step 2: Initialize database
-            log.info("[2/11] Initializing database...");
+            log.info("[2/10] Initializing database...");
             DatabaseManager databaseManager = new DatabaseManager(config);
             databaseManager.initialize();
             log.info("Database initialized: {}", config.databaseFile());
 
             // Step 3: Create event bus
-            log.info("[3/11] Creating event bus...");
+            log.info("[3/10] Creating event bus...");
             EventBus eventBus = new EventBus();
             log.info("Event bus created.");
 
             // Step 4: Create monitoring engine
-            log.info("[4/11] Creating monitoring engine...");
+            log.info("[4/10] Creating monitoring engine...");
             MonitoringEngine monitoringEngine = new MonitoringEngine(eventBus);
             log.info("Monitoring engine created.");
 
             // Step 5: Create detection engine
-            log.info("[5/11] Creating detection engine...");
+            log.info("[5/10] Creating detection engine...");
             DetectionEngine detectionEngine = new DetectionEngine(eventBus);
             log.info("Detection engine created.");
 
             // Step 6: Create alert engine
-            log.info("[6/11] Creating alert engine...");
+            log.info("[6/10] Creating alert engine...");
             AlertEngine alertEngine = new AlertEngine(eventBus);
             log.info("Alert engine created.");
 
             // Step 7: Create incident persistence service
-            log.info("[7/11] Creating incident persistence service...");
+            log.info("[7/10] Creating incident persistence service...");
             IncidentPersistenceService incidentPersistenceService = 
                     databaseManager.incidentPersistenceService();
             log.info("Incident persistence service created.");
 
             // Step 8: Create incident persistence subscriber
-            log.info("[8/11] Creating incident persistence subscriber...");
+            log.info("[8/10] Creating incident persistence subscriber...");
             IncidentPersistenceSubscriber incidentPersistenceSubscriber = 
                     new IncidentPersistenceSubscriber(eventBus, incidentPersistenceService);
             log.info("Incident persistence subscriber created.");
 
-            // Step 9: Create validation service
-            log.info("[9/11] Creating validation service...");
-            com.filex.validation.ValidationService validationService = 
-                    new com.filex.validation.ValidationService(eventBus);
-            log.info("Validation service created.");
-
-            // Step 10: Create investigation services
-            log.info("[10/11] Creating investigation services...");
+            // Step 9: Create investigation services
+            log.info("[9/10] Creating investigation services...");
             InvestigationQueryService queryService = databaseManager.investigationQueryService();
             InvestigationMetrics investigationMetrics = new InvestigationMetrics();
             ReplayNavigationService replayService = databaseManager.replayNavigationService(investigationMetrics);
             log.info("Investigation services created.");
 
-            // Step 10: Create workspace service
-            log.info("[10/11] Creating workspace service...");
+            // Step 9: Create workspace service
+            log.info("[9/10] Creating workspace service...");
             WorkspaceService workspaceService = new WorkspaceService(queryService, replayService, config.dataDir());
             log.info("Workspace service created.");
 
-            // Step 11: Create AppContext and ViewManager
-            log.info("[11/11] Creating application context and view manager...");
+            // Step 10: Create AppContext and ViewManager
+            log.info("[10/10] Creating application context and view manager...");
             // Create AppContext with core infrastructure (no ViewManager/WorkspaceService yet)
             AppContext appContext = new AppContext(config, databaseManager, eventBus, 
                     monitoringEngine, detectionEngine, alertEngine,
-                    incidentPersistenceService, incidentPersistenceSubscriber,
-                    validationService);
+                    incidentPersistenceService, incidentPersistenceSubscriber);
             
             // Create ViewManager with the AppContext
             ViewManager viewManager = new ViewManager(appContext);

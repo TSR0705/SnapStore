@@ -9,7 +9,6 @@ import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
 import com.filex.persistence.IncidentPersistenceService;
 import com.filex.ui.ViewManager;
-import com.filex.validation.ValidationService;
 import com.filex.workspace.WorkspaceService;
 
 import java.util.Objects;
@@ -44,7 +43,6 @@ public final class AppContext {
     private final AlertEngine alertEngine;
     private final IncidentPersistenceService incidentPersistenceService;
     private final IncidentPersistenceSubscriber incidentPersistenceSubscriber;
-    private final ValidationService validationService;
     private final com.filex.runtime.RuntimeManager runtimeManager;
     
     /** Set once during bootstrap via setViewManager(). */
@@ -65,8 +63,7 @@ public final class AppContext {
             DetectionEngine detectionEngine,
             AlertEngine alertEngine,
             IncidentPersistenceService incidentPersistenceService,
-            IncidentPersistenceSubscriber incidentPersistenceSubscriber,
-            ValidationService validationService
+            IncidentPersistenceSubscriber incidentPersistenceSubscriber
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
         this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
@@ -76,8 +73,7 @@ public final class AppContext {
         this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
         this.incidentPersistenceService = Objects.requireNonNull(incidentPersistenceService, "incidentPersistenceService must not be null");
         this.incidentPersistenceSubscriber = Objects.requireNonNull(incidentPersistenceSubscriber, "incidentPersistenceSubscriber must not be null");
-        this.validationService = Objects.requireNonNull(validationService, "validationService must not be null");
-        this.runtimeManager = new com.filex.runtime.RuntimeManager(config, databaseManager, eventBus, monitoringEngine, detectionEngine, alertEngine, incidentPersistenceSubscriber, validationService);
+        this.runtimeManager = new com.filex.runtime.RuntimeManager(config, databaseManager, eventBus, monitoringEngine, detectionEngine, alertEngine, incidentPersistenceSubscriber);
     }
 
     /**
@@ -183,7 +179,7 @@ public final class AppContext {
      */
     public String summary() {
         return String.format(
-                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b persistenceReady=%b validationReady=%b runtimeReady=%b viewManagerReady=%b workspaceReady=%b",
+                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b persistenceReady=%b runtimeReady=%b viewManagerReady=%b workspaceReady=%b",
                 config.appName(),
                 databaseManager.isConnected(),
                 eventBus != null,
@@ -191,7 +187,6 @@ public final class AppContext {
                 detectionEngine != null,
                 alertEngine != null,
                 incidentPersistenceService != null,
-                validationService != null,
                 runtimeManager != null,
                 viewManager != null,
                 workspaceService != null
