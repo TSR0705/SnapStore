@@ -43,6 +43,7 @@ public final class AppContext {
     private final AlertEngine alertEngine;
     private final IncidentPersistenceService incidentPersistenceService;
     private final IncidentPersistenceSubscriber incidentPersistenceSubscriber;
+    private final com.filex.runtime.RuntimeManager runtimeManager;
     
     /** Set once during bootstrap via setViewManager(). */
     private ViewManager viewManager;
@@ -72,6 +73,7 @@ public final class AppContext {
         this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
         this.incidentPersistenceService = Objects.requireNonNull(incidentPersistenceService, "incidentPersistenceService must not be null");
         this.incidentPersistenceSubscriber = Objects.requireNonNull(incidentPersistenceSubscriber, "incidentPersistenceSubscriber must not be null");
+        this.runtimeManager = new com.filex.runtime.RuntimeManager(config, eventBus, monitoringEngine, detectionEngine, alertEngine, incidentPersistenceSubscriber);
     }
 
     /**
@@ -142,6 +144,11 @@ public final class AppContext {
         return incidentPersistenceSubscriber;
     }
 
+    /** Returns the runtime manager. */
+    public com.filex.runtime.RuntimeManager runtimeManager() {
+        return runtimeManager;
+    }
+
     /** 
      * Returns the view manager.
      * 
@@ -172,7 +179,7 @@ public final class AppContext {
      */
     public String summary() {
         return String.format(
-                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b persistenceReady=%b viewManagerReady=%b workspaceReady=%b",
+                "[AppContext] config=%s dbConnected=%b eventBusReady=%b monitoringReady=%b detectionReady=%b alertReady=%b persistenceReady=%b runtimeReady=%b viewManagerReady=%b workspaceReady=%b",
                 config.appName(),
                 databaseManager.isConnected(),
                 eventBus != null,
@@ -180,6 +187,7 @@ public final class AppContext {
                 detectionEngine != null,
                 alertEngine != null,
                 incidentPersistenceService != null,
+                runtimeManager != null,
                 viewManager != null,
                 workspaceService != null
         );
