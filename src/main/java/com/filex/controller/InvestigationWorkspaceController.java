@@ -107,16 +107,6 @@ public final class InvestigationWorkspaceController {
             loadIncidents();
         });
 
-        // Subscribe to validation resets to clear transient UI state
-        appContext.eventBus().subscribe(com.filex.event.ValidationResetEvent.class, e -> {
-            Platform.runLater(() -> {
-                incidents.clear();
-                statusLabel.setText("Validation mode reset: transient state cleared.");
-                log.info(com.filex.validation.TruthMarkers.TRUTH,
-                        "TRUTH stage=UIController action=transient_state_cleared reason=validation_reset");
-            });
-        });
-        
         // Set initial placeholder
         updateEmptyStateMessage(appContext.runtimeManager().getCurrentState());
     }
@@ -198,11 +188,7 @@ public final class InvestigationWorkspaceController {
         } else if (state == com.filex.event.RuntimeState.INITIALIZING || state == com.filex.event.RuntimeState.STARTING) {
             message = "System is starting up...";
         } else if (state == com.filex.event.RuntimeState.RUNNING || state == com.filex.event.RuntimeState.DEGRADED) {
-            if (appContext.config().demoMode()) {
-                message = "Monitoring active (Demo Mode). No incidents detected yet.";
-            } else {
-                message = "Monitoring active. No incidents detected yet.";
-            }
+            message = "Monitoring active. No incidents detected yet.";
         } else {
             message = "No incidents yet. Monitoring is inactive.";
         }
