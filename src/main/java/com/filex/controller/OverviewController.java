@@ -11,10 +11,13 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -24,8 +27,8 @@ import java.util.Set;
  * Controller for the Overview landing view.
  *
  * <p>Redesigned to present a high-contrast real-time Threat surveillance dashboard
- * with live telemetry updates, monitoring targets, active rules list, and a scrolling
- * live Security Operations Terminal log feed.
+ * with live telemetry updates, monitoring targets, active rules list, dynamic host target adding,
+ * and a scrolling live Security Operations Terminal log feed.
  */
 public final class OverviewController {
 
@@ -42,6 +45,12 @@ public final class OverviewController {
     @FXML private VBox vboxPaths;
     @FXML private VBox vboxRules;
     @FXML private TextArea txtTerminalLog;
+
+    // Telemetry Statistics Elements
+    @FXML private Label lblWatchCount;
+    @FXML private Label lblDeduplicated;
+    @FXML private Label lblEvaluations;
+    @FXML private Label lblSuppressed;
 
     private Timeline refreshTimeline;
 
@@ -126,6 +135,35 @@ public final class OverviewController {
     }
 
     /**
+     * Action handler to dynamically add any folder on the computer to recursive surveillance watch.
+     */
+    @FXML
+    public void onAddPath() {
+        try {
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setTitle("Register Host Target Directory");
+
+            // Open directory selection dialog centered on the dashboard scene
+            Window ownerWindow = lblStatus.getScene().getWindow();
+            File selectedDirectory = directoryChooser.showDialog(ownerWindow);
+
+            if (selectedDirectory != null) {
+                Path path = selectedDirectory.toPath();
+                appContext.monitoringEngine().addMonitoredPath(path);
+
+                // Print success message to live log terminal
+                appendLog("[SYSTEM] Successfully registered new host path under active recursive surveillance: " + path.toAbsolutePath());
+
+                // Update metrics immediately
+                updateTelemetry();
+            }
+        } catch (Exception e) {
+            log.error("Failed to dynamically add surveillance target path", e);
+            appendLog("[ERROR] Failed to dynamically register path: " + e.getMessage());
+        }
+    }
+
+    /**
      * Helper to write formatted logs directly into the scrolling text-area console feed.
      */
     private void appendLog(String message) {
@@ -196,14 +234,21 @@ public final class OverviewController {
         try {
             // 1. Fetch live metrics
             var monitoringMetrics = appContext.monitoringEngine().getMetrics();
+            var detectionMetrics = appContext.detectionEngine().getMetrics();
             long incidentCount = appContext.incidentPersistenceService().getIncidentCount();
             Set<Path> monitoredRoots = appContext.monitoringEngine().getMonitoredRoots();
 
-            // 2. Set metrics on UI
+            // 2. Set metrics on UI cards
             lblIncidents.setText(String.valueOf(incidentCount));
             lblEvents.setText(String.valueOf(monitoringMetrics.getTotalEventsNormalized()));
             lblPathCount.setText(String.valueOf(monitoringMetrics.getRegisteredPathCount()));
             lblStatus.setText(monitoringMetrics.getCurrentState().toString());
+
+            // 3. Set metrics on Pipeline Telemetry table
+            lblWatchCount.setText(String.valueOf(monitoringMetrics.getActiveWatchCount()));
+            lblDeduplicated.setText(String.valueOf(monitoringMetrics.getTotalEventsDeduplicated()));
+            lblEvaluations.setText(String.valueOf(detectionMetrics.getTotalEvaluations()));
+            lblSuppressed.setText(String.valueOf(detectionMetrics.getTotalSuppressedDetections()));
 
             // Update status styling based on state
             lblStatus.getStyleClass().removeAll("kpi-value-active", "kpi-value-danger", "kpi-value-warning");
@@ -213,7 +258,7 @@ public final class OverviewController {
                 default -> lblStatus.getStyleClass().add("kpi-value-warning");
             }
 
-            // 3. Render monitored directory paths
+            // 4. Render monitored directory paths
             vboxPaths.getChildren().clear();
             if (monitoredRoots.isEmpty()) {
                 Label noPathsLabel = new Label("No paths configured for active monitoring.");
@@ -227,7 +272,7 @@ public final class OverviewController {
                 }
             }
 
-            // 4. Render loaded threat detection rules
+            // 5. Render loaded threat detection rules
             vboxRules.getChildren().clear();
             var rules = appContext.detectionEngine().getRules();
             if (rules.isEmpty()) {
