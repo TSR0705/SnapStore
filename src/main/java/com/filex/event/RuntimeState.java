@@ -17,6 +17,9 @@ public enum RuntimeState {
     /** Application is fully running and operational. */
     RUNNING,
     
+    /** Application is running but one or more core engines failed. */
+    DEGRADED,
+    
     /** Application is beginning shutdown sequence. */
     STOPPING,
     
