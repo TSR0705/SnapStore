@@ -72,6 +72,10 @@ public final class InvestigationWorkspaceController {
     @FXML
     public void initialize() {
         log.debug("InvestigationWorkspaceController initialized.");
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "component=InvestigationWorkspaceController event=workspace_initialized");
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "TRUTH stage=UIController action=workspace_initialized");
 
         // Configure incident list view
         incidentListView.setItems(incidents);
@@ -93,7 +97,25 @@ public final class InvestigationWorkspaceController {
         appContext.eventBus().subscribe(com.filex.event.RuntimeStateChangedEvent.class, this::onRuntimeStateChanged);
 
         // Subscribe to new incidents for live updates
-        appContext.eventBus().subscribe(com.filex.alert.IncidentCreatedEvent.class, e -> loadIncidents());
+        appContext.eventBus().subscribe(com.filex.alert.IncidentCreatedEvent.class, e -> {
+            log.debug(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=InvestigationWorkspaceController event=new_incident_subscription_callback incidentId={}",
+                    sanitize(e.getIncident().getIncidentId()));
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "TRUTH stage=UIController action=live_incident_received incidentId={}",
+                    sanitize(e.getIncident().getIncidentId()));
+            loadIncidents();
+        });
+
+        // Subscribe to validation resets to clear transient UI state
+        appContext.eventBus().subscribe(com.filex.event.ValidationResetEvent.class, e -> {
+            Platform.runLater(() -> {
+                incidents.clear();
+                statusLabel.setText("Validation mode reset: transient state cleared.");
+                log.info(com.filex.validation.TruthMarkers.TRUTH,
+                        "TRUTH stage=UIController action=transient_state_cleared reason=validation_reset");
+            });
+        });
         
         // Set initial placeholder
         updateEmptyStateMessage(appContext.runtimeManager().getCurrentState());
@@ -105,6 +127,10 @@ public final class InvestigationWorkspaceController {
 
     private void loadIncidents() {
         log.debug("Loading incidents...");
+        log.debug(com.filex.validation.TruthMarkers.TRUTH,
+                "component=InvestigationWorkspaceController event=incident_list_refresh_triggered source=manual");
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "TRUTH stage=UIController action=refresh_triggered source=manual");
         loadIncidentsByCriteria(InvestigationCriteria.builder().build());
     }
 
@@ -133,6 +159,15 @@ public final class InvestigationWorkspaceController {
             statusLabel.setText(String.format("Loaded %d incidents", result.getItemCount()));
             
             log.info("Incidents loaded: {} items", result.getItemCount());
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=InvestigationWorkspaceController event=incident_count_loaded count={}",
+                    result.getItemCount());
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "component=InvestigationWorkspaceController event=ui_list_update_complete count={}",
+                    result.getItemCount());
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "TRUTH stage=UIController action=incident_list_updated count={} result=success",
+                    result.getItemCount());
         });
     }
 
@@ -142,6 +177,9 @@ public final class InvestigationWorkspaceController {
             statusLabel.setText("Failed to load incidents: " + error.getMessage());
             
             log.error("Failed to load incidents", error);
+            log.info(com.filex.validation.TruthMarkers.TRUTH,
+                    "TRUTH stage=UIController action=incident_list_updated result=failure err={}",
+                    sanitize(error.getMessage()));
             
             showError("Failed to Load Incidents", 
                      "Could not load incidents from database.", 
@@ -184,6 +222,12 @@ public final class InvestigationWorkspaceController {
         }
 
         log.info("Incident selected: {}", incident.getIncidentId());
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "component=InvestigationWorkspaceController event=incident_selection incidentId={}",
+                sanitize(incident.getIncidentId()));
+        log.info(com.filex.validation.TruthMarkers.TRUTH,
+                "TRUTH stage=UIController action=incident_selected incidentId={}",
+                sanitize(incident.getIncidentId()));
 
         // Update workspace state
         WorkspaceState newState = workspaceService.currentState().toBuilder()
@@ -263,6 +307,26 @@ public final class InvestigationWorkspaceController {
         alert.setHeaderText(header);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    /**
+     * Sanitizes a value for structured logging.
+     */
+    private static String sanitize(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        String s = value.toString();
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (Character.isWhitespace(c) || Character.isISOControl(c)) {
+                sb.append('_');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     // -------------------------------------------------------------------------
