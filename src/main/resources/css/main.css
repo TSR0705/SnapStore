@@ -1,33 +1,41 @@
 /* ============================================================================
    FileX Main Stylesheet
-   Phase 1A: Clean, professional foundation styling
+   Slate-Obsidian Dark Cyberpunk Theme (200% Visual Improvement)
    ============================================================================ */
 
-/* Root Variables */
+/* Root System Tokens & Color Variables */
 .root {
-    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    -fx-font-size: 14px;
+    -fx-font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13.5px;
 
     /* Color Palette */
-    -color-primary: #2c3e50;
-    -color-secondary: #34495e;
-    -color-accent: #3498db;
-    -color-danger: #e74c3c;
-    -color-success: #27ae60;
-    -color-background: #ecf0f1;
-    -color-surface: #ffffff;
-    -color-border: #bdc3c7;
-    -color-text: #2c3e50;
-    -color-text-muted: #7f8c8d;
+    -color-background: #080b11;    /* Deep space obsidian */
+    -color-surface: #0e131f;       /* Slate workspace container background */
+    -color-primary: #0a0d16;       /* Sidebar background */
+    -color-secondary: #161c2a;     /* Panel background & Hover state */
+    -color-accent: #00d2ff;        /* Cyber electric blue glow */
+    
+    /* Severity Colors */
+    -color-low: #38bdf8;           /* Cyan low severity */
+    -color-medium: #fbbf24;        /* Electric yellow medium */
+    -color-high: #f97316;          /* Neon cyber orange high */
+    -color-danger: #ef4444;        /* Cyberpunk neon red critical */
+    
+    -color-success: #10b981;       /* Electric emerald green */
+    -color-border: #1e293b;        /* Thin charcoal slate border */
+    -color-text: #f8fafc;          /* Off-white readable text */
+    -color-text-muted: #94a3b8;    /* Muted silver slate text */
 }
 
 /* ============================================================================
-   Layout Components
+   Main Layout & Workspace Shell
    ============================================================================ */
 
 .sidebar {
     -fx-background-color: -color-primary;
-    -fx-padding: 20 10 20 10;
+    -fx-padding: 24 12 24 12;
+    -fx-border-color: transparent -color-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
 }
 
 .content-area {
@@ -35,97 +43,152 @@
 }
 
 .view-container {
-    -fx-background-color: -color-surface;
-    -fx-padding: 30;
+    -fx-background-color: -color-background;
+    -fx-padding: 32;
+}
+
+/* Split Pane Refinement */
+.split-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.split-pane *.split-pane-divider {
+    -fx-background-color: -color-border;
+    -fx-padding: 0 1 0 1;
+}
+
+.split-pane *.split-pane-divider:hover {
+    -fx-background-color: -color-accent;
 }
 
 /* ============================================================================
-   Typography
+   Typography & Headers
    ============================================================================ */
 
 .app-title {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-padding: 10 0 0 0;
+    -fx-font-size: 26px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -color-text;
+    -fx-padding: 8 0 0 0;
+    -fx-letter-spacing: 1px;
 }
 
 .app-subtitle {
-    -fx-font-size: 12px;
-    -fx-text-fill: #95a5a6;
-    -fx-padding: 0 0 10 0;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-accent;
+    -fx-padding: 0 0 12 0;
+    -fx-text-transform: uppercase;
 }
 
 .view-title {
-    -fx-font-size: 28px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -color-primary;
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -color-text;
 }
 
 .view-subtitle {
-    -fx-font-size: 16px;
+    -fx-font-size: 14px;
     -fx-text-fill: -color-text-muted;
 }
 
 .label-bold {
     -fx-font-weight: bold;
-    -fx-font-size: 14px;
+    -fx-font-size: 13.5px;
     -fx-text-fill: -color-text;
 }
 
 .status-label {
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-text-fill: -color-success;
     -fx-font-weight: bold;
 }
 
 .info-text {
-    -fx-font-size: 13px;
+    -fx-font-size: 12px;
     -fx-text-fill: -color-text-muted;
-    -fx-padding: 10 0 0 0;
 }
 
 /* ============================================================================
-   Navigation Buttons
+   Buttons & Cyber-Action Controls
    ============================================================================ */
 
+.button {
+    -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-text;
+    -fx-font-weight: bold;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10 20 10 20;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #21293b;
+    -fx-border-color: -color-accent;
+    -fx-text-fill: -color-accent;
+}
+
+.button:pressed {
+    -fx-background-color: -color-accent;
+    -fx-text-fill: #000;
+}
+
+/* Primary/Accent Action Button */
+.button-primary {
+    -fx-background-color: -color-accent;
+    -fx-text-fill: #000;
+    -fx-border-color: -color-accent;
+}
+
+.button-primary:hover {
+    -fx-background-color: #8be4ff;
+    -fx-text-fill: #000;
+}
+
+/* Sidebar Navigation Items */
 .nav-button {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-muted;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
     -fx-padding: 12 16 12 16;
     -fx-cursor: hand;
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
     -fx-alignment: CENTER_LEFT;
 }
 
 .nav-button:hover {
     -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-text;
 }
 
 .nav-button:pressed {
-    -fx-background-color: -color-accent;
+    -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-accent;
 }
 
+/* Nav Button Danger / Exit */
 .nav-button-danger {
     -fx-background-color: transparent;
-    -fx-text-fill: #e74c3c;
-    -fx-font-size: 14px;
+    -fx-text-fill: -color-danger;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
     -fx-padding: 12 16 12 16;
     -fx-cursor: hand;
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
-    -fx-alignment: CENTER;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-alignment: CENTER_LEFT;
 }
 
 .nav-button-danger:hover {
-    -fx-background-color: rgba(231, 76, 60, 0.2);
-}
-
-.nav-button-danger:pressed {
-    -fx-background-color: -color-danger;
-    -fx-text-fill: white;
+    -fx-background-color: rgba(239, 68, 68, 0.1);
+    -fx-text-fill: -color-danger;
 }
 
 /* ============================================================================
@@ -136,13 +199,63 @@
     -fx-padding: 8 0 8 0;
 }
 
-.sidebar .separator .line {
-    -fx-border-color: rgba(255, 255, 255, 0.2);
+.separator .line {
+    -fx-border-color: -color-border;
     -fx-border-width: 1 0 0 0;
 }
 
 /* ============================================================================
-   Scrollbars
+   ListViews & Sleek Cyber Cells
+   ============================================================================ */
+
+.list-view {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-padding: 4;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text;
+    -fx-padding: 12 16 12 16;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-margin: 2 0 2 0;
+}
+
+.list-cell:filled:hover {
+    -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-text;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: #1e293b;
+    -fx-border-color: -color-accent;
+    -fx-border-width: 1;
+    -fx-text-fill: -color-accent;
+}
+
+/* Monospace text logs and timeline outputs */
+.text-area {
+    -fx-background-color: -color-surface;
+    -fx-text-fill: -color-text;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+    -fx-font-size: 12.5px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.text-area .content {
+    -fx-background-color: -color-surface;
+}
+
+/* ============================================================================
+   Scrollbars Refinement
    ============================================================================ */
 
 .scroll-pane {
@@ -153,12 +266,15 @@
     -fx-background-color: transparent;
 }
 
-.scroll-bar:vertical .thumb {
-    -fx-background-color: -color-border;
-    -fx-background-radius: 4;
+.scroll-bar:vertical, .scroll-bar:horizontal {
+    -fx-background-color: transparent;
 }
 
-.scroll-bar:horizontal .thumb {
+.scroll-bar:vertical .thumb, .scroll-bar:horizontal .thumb {
     -fx-background-color: -color-border;
-    -fx-background-radius: 4;
+    -fx-background-radius: 10;
+}
+
+.scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: -color-accent;
 }
