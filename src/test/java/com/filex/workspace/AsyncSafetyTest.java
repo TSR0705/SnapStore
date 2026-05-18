@@ -132,6 +132,7 @@ class AsyncSafetyTest {
                 .build();
         
         workspaceService.updateState(state);
+        Thread.sleep(300); // Allow async save to complete
         
         // Shutdown to save session
         workspaceService.shutdown();
