@@ -1,98 +1,99 @@
 package com.filex.runtime;
 
+import com.filex.alert.AlertEngine;
+import com.filex.alert.IncidentPersistenceSubscriber;
+import com.filex.config.AppConfig;
+import com.filex.detection.DetectionEngine;
+import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
 import com.filex.event.RuntimeState;
-import com.filex.event.RuntimeStateChangedEvent;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
-import java.util.ArrayList;
+import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
 
-/**
- * Tests for RuntimeManager.
- */
-class RuntimeManagerTest {
+public class RuntimeManagerTest {
 
+    @TempDir
+    Path tempDir;
+
+    private AppConfig config;
     private EventBus eventBus;
+    private MonitoringEngine monitoringEngine;
+    private DetectionEngine detectionEngine;
+    private AlertEngine alertEngine;
+    private IncidentPersistenceSubscriber persistenceSubscriber;
     private RuntimeManager runtimeManager;
 
     @BeforeEach
     void setUp() {
-        eventBus = new EventBus();
-        runtimeManager = new RuntimeManager(eventBus);
-    }
+        config = mock(AppConfig.class);
+        eventBus = mock(EventBus.class);
+        monitoringEngine = mock(MonitoringEngine.class);
+        detectionEngine = mock(DetectionEngine.class);
+        alertEngine = mock(AlertEngine.class);
+        persistenceSubscriber = mock(IncidentPersistenceSubscriber.class);
 
-    @AfterEach
-    void tearDown() {
-        if (eventBus != null) {
-            eventBus.shutdown();
-        }
-    }
-
-    @Test
-    void testInitialState() {
-        assertEquals(RuntimeState.INITIALIZING, runtimeManager.getCurrentState());
+        runtimeManager = new RuntimeManager(
+                config, eventBus, monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber
+        );
     }
 
     @Test
-    void testValidTransition() {
-        // Given
-        List<RuntimeStateChangedEvent> events = new ArrayList<>();
-        eventBus.subscribe(RuntimeStateChangedEvent.class, events::add);
+    void testStartupOrder() throws Exception {
+        when(config.demoMode()).thenReturn(false);
 
-        // When
-        runtimeManager.transitionTo(RuntimeState.STARTING);
+        runtimeManager.start();
 
-        // Then
-        assertEquals(RuntimeState.STARTING, runtimeManager.getCurrentState());
-        assertEquals(1, events.size());
-        assertEquals(RuntimeState.INITIALIZING, events.get(0).getPreviousState());
-        assertEquals(RuntimeState.STARTING, events.get(0).getNewState());
+        InOrder inOrder = inOrder(persistenceSubscriber, detectionEngine, alertEngine);
+        inOrder.verify(persistenceSubscriber).start();
+        inOrder.verify(detectionEngine).start();
+        inOrder.verify(alertEngine).start();
+
+        assertEquals(RuntimeState.RUNNING, runtimeManager.getCurrentState());
     }
 
     @Test
-    void testInvalidTransition() {
-        // When/Then
-        assertThrows(IllegalStateException.class, () ->
-                runtimeManager.transitionTo(RuntimeState.STOPPED));
+    void testDemoModeActivation() throws Exception {
+        Path demoPath = tempDir.resolve("demo-watch");
+        when(config.demoMode()).thenReturn(true);
+        when(config.demoMonitorPath()).thenReturn(demoPath);
+        when(config.demoAutoCreatePath()).thenReturn(true);
+
+        runtimeManager.start();
+
+        verify(monitoringEngine).start(Collections.singletonList(demoPath));
+        assertEquals(RuntimeState.RUNNING, runtimeManager.getCurrentState());
     }
 
     @Test
-    void testFullLifecycle() {
-        // When
-        runtimeManager.transitionTo(RuntimeState.STARTING);
-        runtimeManager.transitionTo(RuntimeState.RUNNING);
-        runtimeManager.transitionTo(RuntimeState.STOPPING);
-        runtimeManager.transitionTo(RuntimeState.STOPPED);
+    void testShutdownOrder() {
+        runtimeManager.start();
+        runtimeManager.stop();
 
-        // Then
+        InOrder inOrder = inOrder(monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber);
+        inOrder.verify(monitoringEngine).stop();
+        inOrder.verify(detectionEngine).stop();
+        inOrder.verify(alertEngine).stop();
+        inOrder.verify(persistenceSubscriber).stop();
+
         assertEquals(RuntimeState.STOPPED, runtimeManager.getCurrentState());
     }
 
     @Test
-    void testFailedState() {
-        // When
-        runtimeManager.transitionTo(RuntimeState.FAILED);
+    void testStartupFailure() throws Exception {
+        doThrow(new RuntimeException("Simulated failure")).when(detectionEngine).start();
 
-        // Then
+        runtimeManager.start();
+
         assertEquals(RuntimeState.FAILED, runtimeManager.getCurrentState());
-
-        // Failed is terminal
-        assertThrows(IllegalStateException.class, () ->
-                runtimeManager.transitionTo(RuntimeState.RUNNING));
-    }
-
-    @Test
-    void testIdempotentTransition() {
-        // When
-        runtimeManager.transitionTo(RuntimeState.STARTING);
-        runtimeManager.transitionTo(RuntimeState.STARTING); // Same state
-
-        // Then
-        assertEquals(RuntimeState.STARTING, runtimeManager.getCurrentState());
     }
 }

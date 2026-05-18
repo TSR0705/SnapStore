@@ -1,6 +1,7 @@
 package com.filex.workspace;
 
 import com.filex.investigation.*;
+import com.filex.investigation.replay.ReplayCursor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -378,6 +379,45 @@ public final class WorkspaceService {
     }
 
     /**
+     * Finds evidence matching criteria asynchronously.
+     */
+    public void findEvidenceAsync(
+            InvestigationCriteria criteria,
+            int pageNumber,
+            int pageSize,
+            Consumer<InvestigationResult<EvidenceSummary>> onSuccess,
+            Consumer<Throwable> onFailure) {
+        
+        metrics.recordAsyncQueryDispatched();
+        
+        final long requestGeneration = evidenceQueryGeneration.incrementAndGet();
+        
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return queryService.findEvidence(criteria, pageNumber, pageSize);
+            } catch (InvestigationException e) {
+                throw new RuntimeException("Failed to find evidence by criteria", e);
+            }
+        }, queryExecutor)
+        .whenComplete((result, error) -> {
+            javafx.application.Platform.runLater(() -> {
+                if (evidenceQueryGeneration.get() != requestGeneration) {
+                    metrics.recordStaleAsyncResponseIgnored();
+                    return;
+                }
+                
+                if (error != null) {
+                    metrics.recordAsyncQueryFailed();
+                    onFailure.accept(error);
+                } else {
+                    metrics.recordAsyncQueryCompleted();
+                    onSuccess.accept(result);
+                }
+            });
+        });
+    }
+
+    /**
      * Replays incident timeline asynchronously.
      *
      * @param incidentId incident ID
@@ -413,6 +453,51 @@ public final class WorkspaceService {
                     metrics.recordAsyncQueryFailed();
                     metrics.recordReplayInterruption();
                     log.error("Async replay failed: {}", incidentId, error);
+                    onFailure.accept(error);
+                } else {
+                    metrics.recordAsyncQueryCompleted();
+                    long latency = System.currentTimeMillis() - startTime;
+                    metrics.recordReplayRender(latency);
+                    log.debug("Async replay completed: {} events in {}ms", 
+                            result.getEventCount(), latency);
+                    onSuccess.accept(result);
+                }
+            });
+        });
+    }
+
+    /**
+     * Replays incident timeline from a checkpoint asynchronously.
+     */
+    public void replayFromCheckpointAsync(
+            ReplayCursor cursor,
+            Consumer<ReplayNavigationService.ReplayWindow> onSuccess,
+            Consumer<Throwable> onFailure) {
+        
+        metrics.recordAsyncQueryDispatched();
+        
+        final long requestGeneration = replayQueryGeneration.incrementAndGet();
+        long startTime = System.currentTimeMillis();
+        
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return replayService.replayFromCheckpoint(cursor);
+            } catch (InvestigationException e) {
+                throw new RuntimeException("Failed to replay from checkpoint: " + cursor.incidentId(), e);
+            }
+        }, queryExecutor)
+        .whenComplete((result, error) -> {
+            javafx.application.Platform.runLater(() -> {
+                if (replayQueryGeneration.get() != requestGeneration) {
+                    metrics.recordStaleAsyncResponseIgnored();
+                    log.debug("Discarding stale replay response for {}", cursor.incidentId());
+                    return;
+                }
+                
+                if (error != null) {
+                    metrics.recordAsyncQueryFailed();
+                    metrics.recordReplayInterruption();
+                    log.error("Async replay failed: {}", cursor.incidentId(), error);
                     onFailure.accept(error);
                 } else {
                     metrics.recordAsyncQueryCompleted();

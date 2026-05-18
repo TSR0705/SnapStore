@@ -67,6 +67,8 @@ public final class ConfigManager {
         Path databaseFile = dataDir.resolve(AppConfig.DB_FILENAME);
 
         boolean debugMode = resolveDebugMode();
+        boolean demoMode = resolveDemoMode();
+        Path demoMonitorPath = resolveDemoMonitorPath();
 
         ensureDirectory(appHome);
         ensureDirectory(logsDir);
@@ -81,7 +83,10 @@ public final class ConfigManager {
                 databaseFile,
                 AppConfig.APP_NAME,
                 AppConfig.APP_VERSION,
-                debugMode
+                debugMode,
+                demoMode,
+                demoMonitorPath,
+                resolveDemoAutoCreatePath()
         );
 
         log.info(config.summary());
@@ -129,6 +134,30 @@ public final class ConfigManager {
             return "true".equalsIgnoreCase(debugEnv.trim());
         }
         return "true".equalsIgnoreCase(System.getProperty("filex.debug", "false"));
+    }
+
+    private static boolean resolveDemoMode() {
+        String demoEnv = System.getenv("FILEX_DEMO_MODE");
+        if (demoEnv != null) {
+            return "true".equalsIgnoreCase(demoEnv.trim());
+        }
+        return "true".equalsIgnoreCase(System.getProperty("filex.demo.mode", "true"));
+    }
+
+    private static Path resolveDemoMonitorPath() {
+        String monitorPath = System.getProperty("filex.demo.monitor.path");
+        if (monitorPath != null && !monitorPath.isBlank()) {
+            return Paths.get(monitorPath);
+        }
+        return Paths.get("demo-watch");
+    }
+
+    private static boolean resolveDemoAutoCreatePath() {
+        String autoCreateEnv = System.getenv("FILEX_DEMO_AUTO_CREATE");
+        if (autoCreateEnv != null) {
+            return "true".equalsIgnoreCase(autoCreateEnv.trim());
+        }
+        return "true".equalsIgnoreCase(System.getProperty("filex.demo.autoCreatePath", "true"));
     }
 
     private static void ensureDirectory(Path path) {

@@ -88,6 +88,15 @@ public final class InvestigationWorkspaceController {
 
         // Transition to incident list context
         workspaceService.transitionTo(NavigationContext.INCIDENT_LIST);
+
+        // Subscribe to runtime state changes to update empty state messaging
+        appContext.eventBus().subscribe(com.filex.event.RuntimeStateChangedEvent.class, this::onRuntimeStateChanged);
+
+        // Subscribe to new incidents for live updates
+        appContext.eventBus().subscribe(com.filex.alert.IncidentCreatedEvent.class, e -> loadIncidents());
+        
+        // Set initial placeholder
+        updateEmptyStateMessage(appContext.runtimeManager().getCurrentState());
     }
 
     // -------------------------------------------------------------------------
@@ -96,11 +105,15 @@ public final class InvestigationWorkspaceController {
 
     private void loadIncidents() {
         log.debug("Loading incidents...");
-        
+        loadIncidentsByCriteria(InvestigationCriteria.builder().build());
+    }
+
+    /**
+     * Loads incidents using specific criteria.
+     */
+    public void loadIncidentsByCriteria(InvestigationCriteria criteria) {
         setLoading(true);
         statusLabel.setText("Loading incidents...");
-
-        InvestigationCriteria criteria = InvestigationCriteria.builder().build();
 
         workspaceService.findIncidentsAsync(
                 criteria,
@@ -134,6 +147,31 @@ public final class InvestigationWorkspaceController {
                      "Could not load incidents from database.", 
                      error.getMessage());
         });
+    }
+
+    private void onRuntimeStateChanged(com.filex.event.RuntimeStateChangedEvent event) {
+        Platform.runLater(() -> updateEmptyStateMessage(event.getNewState()));
+    }
+
+    private void updateEmptyStateMessage(com.filex.event.RuntimeState state) {
+        String message;
+        if (state == com.filex.event.RuntimeState.FAILED) {
+            message = "Monitoring failed to start. Check configuration.";
+        } else if (state == com.filex.event.RuntimeState.INITIALIZING || state == com.filex.event.RuntimeState.STARTING) {
+            message = "System is starting up...";
+        } else if (state == com.filex.event.RuntimeState.RUNNING || state == com.filex.event.RuntimeState.DEGRADED) {
+            if (appContext.config().demoMode()) {
+                message = "Monitoring active (Demo Mode). No incidents detected yet.";
+            } else {
+                message = "Monitoring active. No incidents detected yet.";
+            }
+        } else {
+            message = "No incidents yet. Monitoring is inactive.";
+        }
+        
+        Label placeholder = new Label(message);
+        placeholder.setStyle("-fx-text-fill: #757575; -fx-font-style: italic;");
+        incidentListView.setPlaceholder(placeholder);
     }
 
     // -------------------------------------------------------------------------

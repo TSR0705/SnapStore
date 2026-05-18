@@ -63,6 +63,7 @@ public final class IncidentDetailController {
     @FXML private Label errorLabel;
 
     private String currentIncidentId;
+    private IncidentSummary currentIncident;
     private InvestigationWorkspaceController workspaceController;
 
     /**
@@ -126,6 +127,7 @@ public final class IncidentDetailController {
      * Displays incident details in UI.
      */
     private void displayIncident(IncidentSummary incident) {
+        this.currentIncident = incident;
         Platform.runLater(() -> {
             incidentIdLabel.setText(incident.getIncidentId());
             titleLabel.setText(incident.getTitle());
@@ -225,12 +227,28 @@ public final class IncidentDetailController {
      * Navigates to related incidents view.
      */
     private void navigateToRelated() {
-        if (currentIncidentId == null) {
+        if (currentIncident == null || workspaceController == null) {
             return;
         }
 
-        // TODO: Implement correlation navigation
-        log.info("Navigate to related incidents for: {}", currentIncidentId);
+        String correlationId = currentIncident.getCorrelationId();
+        if (correlationId == null || correlationId.isBlank()) {
+            showError("No correlation ID found for this incident.");
+            return;
+        }
+
+        log.info("Navigate to related incidents for correlation ID: {}", correlationId);
+
+        com.filex.investigation.InvestigationCriteria criteria = com.filex.investigation.InvestigationCriteria.builder()
+                .correlationId(correlationId)
+                .build();
+
+        workspaceController.loadIncidentsByCriteria(criteria);
+        
+        WorkspaceState newState = workspaceService.currentState().toBuilder()
+                .navigationContext(NavigationContext.INCIDENT_LIST)
+                .build();
+        workspaceService.updateState(newState);
     }
 
     /**

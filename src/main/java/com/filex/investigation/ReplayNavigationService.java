@@ -3,6 +3,8 @@ package com.filex.investigation;
 import com.filex.model.ForensicTimelineEntity;
 import com.filex.repository.ForensicTimelineRepository;
 import com.filex.repository.PageRequest;
+import com.filex.investigation.replay.ReplayCursor;
+import com.filex.investigation.replay.ReplayDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,6 +148,55 @@ public final class ReplayNavigationService {
             metrics.recordFailedQuery();
             log.error("Failed to replay incident timeline: {}", incidentId, e);
             throw new InvestigationException("Failed to replay incident timeline: " + incidentId, e);
+        }
+    }
+
+    /**
+     * Replays timeline events from a specific checkpoint cursor.
+     */
+    public ReplayWindow replayFromCheckpoint(ReplayCursor cursor) throws InvestigationException {
+        Objects.requireNonNull(cursor, "cursor must not be null");
+
+        long startMs = System.currentTimeMillis();
+        try {
+            metrics.recordReplayNavigation();
+
+            List<ForensicTimelineEntity> events;
+            if (cursor.direction() == ReplayDirection.FORWARD) {
+                events = timelineRepository.findForwardFromCheckpoint(
+                        cursor.incidentId(), cursor.timestamp(), cursor.sequenceNumber(), cursor.windowSize()
+                );
+            } else {
+                events = timelineRepository.findBackwardFromCheckpoint(
+                        cursor.incidentId(), cursor.timestamp(), cursor.sequenceNumber(), cursor.windowSize()
+                );
+            }
+
+            List<TimelineEventSummary> summaries = events.stream()
+                    .map(this::toTimelineEventSummary)
+                    .toList();
+
+            long totalCount = timelineRepository.countByIncidentId(cursor.incidentId());
+            long duration = System.currentTimeMillis() - startMs;
+            metrics.recordQuery(duration);
+
+            Instant startTime = summaries.isEmpty() ? cursor.timestamp() : summaries.get(0).getTimestamp();
+            Instant endTime = summaries.isEmpty() ? cursor.timestamp() : summaries.get(summaries.size() - 1).getTimestamp();
+
+            return new ReplayWindow(
+                    summaries,
+                    startTime,
+                    endTime,
+                    0,
+                    cursor.windowSize(),
+                    totalCount,
+                    summaries.size() == cursor.windowSize() // true if there might be more
+            );
+
+        } catch (SQLException e) {
+            metrics.recordFailedQuery();
+            log.error("Failed to replay from checkpoint: {}", cursor, e);
+            throw new InvestigationException("Failed to replay from checkpoint: " + cursor.incidentId(), e);
         }
     }
 

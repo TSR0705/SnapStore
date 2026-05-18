@@ -3,6 +3,8 @@ package com.filex.controller;
 import com.filex.app.AppContext;
 import com.filex.investigation.ReplayNavigationService;
 import com.filex.investigation.TimelineEventSummary;
+import com.filex.investigation.replay.ReplayCursor;
+import com.filex.investigation.replay.ReplayDirection;
 import com.filex.workspace.NavigationContext;
 import com.filex.workspace.WorkspaceService;
 import com.filex.workspace.WorkspaceState;
@@ -132,8 +134,11 @@ public final class ReplayController {
         clearError();
         hideRetry();
 
-        workspaceService.replayIncidentTimelineAsync(
-                incidentId,
+        ReplayCursor startCursor = new ReplayCursor(
+                incidentId, Instant.EPOCH, 0, ReplayDirection.FORWARD, MAX_VISIBLE_EVENTS);
+        
+        workspaceService.replayFromCheckpointAsync(
+                startCursor,
                 this::displayReplay,
                 this::handleReplayFailure
         );
@@ -207,6 +212,28 @@ public final class ReplayController {
             updatePosition();
             
             log.debug("Stepped backward to position: {}", currentPosition);
+        } else {
+            // Need to fetch previous window
+            TimelineEventSummary firstEvent = replayEvents.get(0);
+            ReplayCursor cursor = new ReplayCursor(
+                    currentIncidentId, 
+                    firstEvent.getTimestamp(), 
+                    firstEvent.getSequenceNumber(), 
+                    ReplayDirection.BACKWARD, 
+                    MAX_VISIBLE_EVENTS
+            );
+            
+            setLoading(true);
+            workspaceService.replayFromCheckpointAsync(cursor, window -> {
+                displayReplay(window);
+                Platform.runLater(() -> {
+                    // Start at the end of the newly loaded previous window
+                    currentPosition = replayEvents.size() - 1;
+                    replayListView.getSelectionModel().select(currentPosition);
+                    replayListView.scrollTo(currentPosition);
+                    updatePosition();
+                });
+            }, this::handleReplayFailure);
         }
     }
 
@@ -225,6 +252,19 @@ public final class ReplayController {
             updatePosition();
             
             log.debug("Stepped forward to position: {}", currentPosition);
+        } else if (currentReplayWindow != null && currentReplayWindow.hasMore()) {
+            // Need to fetch next window
+            TimelineEventSummary lastEvent = replayEvents.get(replayEvents.size() - 1);
+            ReplayCursor cursor = new ReplayCursor(
+                    currentIncidentId, 
+                    lastEvent.getTimestamp(), 
+                    lastEvent.getSequenceNumber(), 
+                    ReplayDirection.FORWARD, 
+                    MAX_VISIBLE_EVENTS
+            );
+            
+            setLoading(true);
+            workspaceService.replayFromCheckpointAsync(cursor, this::displayReplay, this::handleReplayFailure);
         }
     }
 
@@ -232,32 +272,42 @@ public final class ReplayController {
      * Jumps to start of replay timeline (checkpoint).
      */
     private void jumpToStart() {
-        if (!replayLoaded || replayEvents.isEmpty()) {
+        if (!replayLoaded && currentIncidentId == null) {
             return;
         }
         
-        currentPosition = 0;
-        replayListView.getSelectionModel().select(currentPosition);
-        replayListView.scrollTo(currentPosition);
-        updatePosition();
+        log.info("Jumped to true start of replay timeline");
+        ReplayCursor cursor = new ReplayCursor(
+                currentIncidentId, Instant.EPOCH, 0, ReplayDirection.FORWARD, MAX_VISIBLE_EVENTS);
         
-        log.info("Jumped to start of replay timeline");
+        setLoading(true);
+        workspaceService.replayFromCheckpointAsync(cursor, this::displayReplay, this::handleReplayFailure);
     }
 
     /**
      * Jumps to end of replay timeline (checkpoint).
      */
     private void jumpToEnd() {
-        if (!replayLoaded || replayEvents.isEmpty()) {
+        if (!replayLoaded && currentIncidentId == null) {
             return;
         }
         
-        currentPosition = replayEvents.size() - 1;
-        replayListView.getSelectionModel().select(currentPosition);
-        replayListView.scrollTo(currentPosition);
-        updatePosition();
+        log.info("Jumped to true end of replay timeline");
+        // Use a future timestamp to fetch the very last events backward
+        ReplayCursor cursor = new ReplayCursor(
+                currentIncidentId, Instant.ofEpochMilli(Long.MAX_VALUE), Long.MAX_VALUE, ReplayDirection.BACKWARD, MAX_VISIBLE_EVENTS);
         
-        log.info("Jumped to end of replay timeline");
+        setLoading(true);
+        workspaceService.replayFromCheckpointAsync(cursor, window -> {
+            displayReplay(window);
+            Platform.runLater(() -> {
+                // Select the actual last event in the new window
+                currentPosition = replayEvents.size() - 1;
+                replayListView.getSelectionModel().select(currentPosition);
+                replayListView.scrollTo(currentPosition);
+                updatePosition();
+            });
+        }, this::handleReplayFailure);
     }
 
     /**
@@ -337,13 +387,21 @@ public final class ReplayController {
             jumpToStartButton.setDisable(true);
             jumpToEndButton.setDisable(true);
         } else {
-            positionLabel.setText(String.format("Position: %d/%d", 
-                    currentPosition + 1, replayEvents.size()));
+            // position is not absolute anymore across the whole incident, but relative to window
+            positionLabel.setText(String.format("Window Pos: %d/%d (Total: %d)", 
+                    currentPosition + 1, replayEvents.size(), currentReplayWindow != null ? currentReplayWindow.totalEventCount() : 0));
             
-            stepBackwardButton.setDisable(currentPosition == 0);
-            stepForwardButton.setDisable(currentPosition == replayEvents.size() - 1);
-            jumpToStartButton.setDisable(currentPosition == 0);
-            jumpToEndButton.setDisable(currentPosition == replayEvents.size() - 1);
+            // Can always try to fetch backward unless we know we're at the very absolute beginning.
+            // For now, enable step backward if not at position 0 OR if we might have previous windows.
+            stepBackwardButton.setDisable(false);
+            
+            // Disable forward if at end of window AND no more events in db
+            boolean atEndOfWindow = currentPosition == replayEvents.size() - 1;
+            boolean hasMore = currentReplayWindow != null && currentReplayWindow.hasMore();
+            stepForwardButton.setDisable(atEndOfWindow && !hasMore);
+            
+            jumpToStartButton.setDisable(false);
+            jumpToEndButton.setDisable(false);
         }
     }
 

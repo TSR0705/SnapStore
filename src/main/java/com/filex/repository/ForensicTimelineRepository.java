@@ -114,6 +114,82 @@ public final class ForensicTimelineRepository {
     }
 
     /**
+     * Finds timeline records forward from a specific checkpoint.
+     */
+    public List<ForensicTimelineEntity> findForwardFromCheckpoint(String incidentId, Instant timestamp, long sequenceNumber, int limit) throws SQLException {
+        List<ForensicTimelineEntity> timeline = new ArrayList<>();
+        String sql = """
+                SELECT * FROM forensic_timeline 
+                WHERE incident_id = ? 
+                  AND (timestamp > ? OR (timestamp = ? AND sequence_number > ?))
+                ORDER BY timestamp ASC, sequence_number ASC 
+                LIMIT ?
+                """;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, incidentId);
+            pstmt.setLong(2, timestamp.toEpochMilli());
+            pstmt.setLong(3, timestamp.toEpochMilli());
+            pstmt.setLong(4, sequenceNumber);
+            pstmt.setInt(5, limit);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    timeline.add(mapRow(rs));
+                }
+            }
+        }
+        return timeline;
+    }
+
+    /**
+     * Finds timeline records backward from a specific checkpoint.
+     */
+    public List<ForensicTimelineEntity> findBackwardFromCheckpoint(String incidentId, Instant timestamp, long sequenceNumber, int limit) throws SQLException {
+        List<ForensicTimelineEntity> timeline = new ArrayList<>();
+        String sql = """
+                SELECT * FROM forensic_timeline 
+                WHERE incident_id = ? 
+                  AND (timestamp < ? OR (timestamp = ? AND sequence_number < ?))
+                ORDER BY timestamp DESC, sequence_number DESC 
+                LIMIT ?
+                """;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, incidentId);
+            pstmt.setLong(2, timestamp.toEpochMilli());
+            pstmt.setLong(3, timestamp.toEpochMilli());
+            pstmt.setLong(4, sequenceNumber);
+            pstmt.setInt(5, limit);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // For backward fetch we get results in DESC order, but we want them displayed chronologically
+                    // so we insert at beginning.
+                    timeline.add(0, mapRow(rs));
+                }
+            }
+        }
+        return timeline;
+    }
+
+    /**
+     * Counts the total timeline records for a specific incident.
+     */
+    public long countByIncidentId(String incidentId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM forensic_timeline WHERE incident_id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, incidentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Finds timeline records by event type, paginated.
      */
     public Page<ForensicTimelineEntity> findByEventType(String eventType, PageRequest pageRequest) throws SQLException {
