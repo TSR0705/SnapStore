@@ -1,57 +1,55 @@
-# 🏗️ FileX Architecture Deep Dive
+# 🏗️ Detailed FileX Architectural Framework
 
-FileX is designed using clean architecture patterns with strict separation of concerns. This ensures that the system remains highly testable, easily maintainable, and completely decoupled.
+This document complements the root **[ARCHITECTURE.md](../ARCHITECTURE.md)**, focusing specifically on deep structural layers, dynamic constructor dependency injection, and internal pipeline mechanisms.
 
 ---
 
-## 1. Structural Layers
+## 1. Structural Design & Presentation Cleanliness
+
+FileX operates under strict domain segregation to guarantee absolute component decoupling. This prevents database leakage into presentation and isolates business rules from display frameworks.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Presentation Layer                       │
 │  (JavaFX Controllers, FXML Views, ViewManager)              │
-│   Thin UI Controllers, no direct database or logic access   │
+│  Thin, purely declarative layout binders. Publishes zero    │
+│  SQL queries and handles zero detection heuristics.         │
 └────────────────────┬────────────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────────────────┐
 │                    Application Layer                         │
 │  (AppContext, Bootstrap, EventBus, Services)                │
-│   Dynamic orchestrators, thread executors, dynamic context  │
+│  The dynamic runtime orchestrator. Decouples workflows      │
+│  via asynchronous multi-producer single-consumer buffers.  │
 └────────────────────┬────────────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────────────────┐
 │                   Infrastructure Layer                       │
 │  (DatabaseManager, ConfigManager, Repositories)             │
-│   SQLite transaction engines, native OS filesystem binders  │
+│  OS-native WatchService bindings and SQLite WAL storage.   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Layer Responsibilities
-*   **Presentation Layer:** Thin controllers linked to JavaFX FXML views. They interact solely with application layer services via asynchronously loaded models and publish zero raw SQL.
-*   **Application Layer:** Coordinates lifecycle events, registers event handlers on the type-safe `EventBus`, and manages parallel execution queues.
-*   **Infrastructure Layer:** Interfaces with OS-native filesystem listeners and persists security metadata using transaction templates inside SQLite.
-
 ---
 
-## 2. Event-Driven Dispatch System (`EventBus.java`)
+## 2. Dependency Injection and The AppContext Container
 
-All components in FileX communicate asynchronously and safely through a central **Type-Safe Event Bus**. 
+To maintain clean object lifecycles, **FileX explicitly rejects all forms of static singleton pattern abuse** (e.g. `getInstance()` methods). Instead, instances are created once by `com.filex.app.Bootstrap` and wrapped inside an immutable context container:
 
-### Key Features
-1.  **Type Safety:** Handlers subscribe to specific Java classes extending the base event framework.
-2.  **MDC context propagation:** Automatically propagates thread-local diagnostic contexts (`MDC`) across asynchronous boundaries to preserve correlation IDs during deep analyses.
-3.  **Decoupled Lifecycles:** Allows components like the `DetectionEngine` to process logs without needing to hold a direct pointer to the `AlertEngine`.
+```java
+public final class AppContext {
+    private final AppConfig config;
+    private final DatabaseManager databaseManager;
+    private final EventBus eventBus;
+    private final MonitoringEngine monitoringEngine;
+    private final DetectionEngine detectionEngine;
+    private final AlertEngine alertEngine;
+    private final WorkspaceService workspaceService;
+    // Constructor-based composing
+}
+```
 
----
-
-## 3. Dependency Injection (`AppContext.java`)
-
-FileX completely rejects the **Singleton Anti-Pattern** (e.g., `getInstance()` methods).
-Instead, all dependencies are initialized once during the [Bootstrap.java](file:///c:/Users/ACER/OneDrive/Desktop/FILE-X-REIMAGINE/src/main/java/com/filex/app/Bootstrap.java) phase and explicitly injected into constructors.
-
-### Initialization Order:
-1.  **Config Resolution:** Evaluates paths and debug environments.
-2.  **Database Connection:** Connects to SQLite and executes migrations DDL.
-3.  **Event Pipeline:** Launches the synchronous `EventBus`.
-4.  **Engine Instantiation:** Starts monitoring, detection, and alerting processors.
-5.  **UI Shell:** Bundles components inside `AppContext` and builds the JavaFX workspace.
+This strict layout enables:
+* **Frictionless Unit Testing:** Dependencies can be mocked effortlessly.
+* **Deterministic Shutdowns:** Engines are torn down in precise reverse order to prevent active file descriptor leaks.
+* **Config Flexibility:** The application can run concurrently in distinct isolated sandboxes without cross-polluting global variables.

@@ -5,25 +5,29 @@
   <img src="https://img.shields.io/badge/JavaFX-21-blue.svg?style=for-the-badge&logo=javafx" alt="JavaFX 21" />
   <img src="https://img.shields.io/badge/Database-SQLite-green.svg?style=for-the-badge&logo=sqlite" alt="SQLite" />
   <img src="https://img.shields.io/badge/Architecture-Clean-lightgrey.svg?style=for-the-badge" alt="Clean Architecture" />
-  <img src="https://img.shields.io/badge/Status-Production--Ready-brightgreen.svg?style=for-the-badge" alt="Production Ready" />
+  <img src="https://img.shields.io/badge/Status-SaaS--Production--Ready-brightgreen.svg?style=for-the-badge" alt="SaaS Ready" />
 </p>
 
 ---
 
-**FileX** is a production-grade, highly optimized local security agent designed to monitor filesystem operations at the OS kernel level, analyze telemetry in real-time using parallel heuristics, and persist security incidents inside a relational forensic archive. 
+**FileX** is a production-grade, highly optimized local security agent designed to monitor host filesystem operations at the OS API layer, analyze telemetry in real-time using parallel heuristics, and persist security incidents inside a relational forensic archive. 
 
-Built on Java 21, JavaFX, and an asynchronous event-driven architecture, FileX stands out with zero global singleton abuse, clean dependency injection, strict thread boundary isolation, and dynamic rule expandability.
+Built on Java 21, JavaFX, and an asynchronous event-driven architecture, FileX stands out with zero global singleton abuse, clean constructor dependency injection, strict thread boundary isolation, and a premium SaaS-grade threat briefing workspace.
 
 ---
 
-## 📚 Extensive Technical Documentation
+## 📚 Technical Documentation Index
 
-Explore the comprehensive sub-guides detailing specific system architectures, database designs, and investigator runbooks:
+Explore our comprehensive technical blueprints, developer setup guides, and contributor standards:
 
-*   **[🏗️ Architecture Guide](file:///c:/Users/ACER/OneDrive/Desktop/FILE-X-REIMAGINE/docs/architecture.md)** — In-depth look at clean design layers, type-safe `EventBus` structures, and constructor-based dependency injection.
-*   **[🛡️ Threat Detection Heuristics](file:///c:/Users/ACER/OneDrive/Desktop/FILE-X-REIMAGINE/docs/threat_detection.md)** — Analysis of all built-in security rules (Mass Deletion, Rapid Modifications, and Hidden persistence hooks).
-*   **[🗄️ Database & Forensics Schema](file:///c:/Users/ACER/OneDrive/Desktop/FILE-X-REIMAGINE/docs/database_forensics.md)** — Comprehensive review of SQLite WAL database structures, versioned schema migrations, indexes, and database schemas.
-*   **[💻 Operator & Investigation Manual](file:///c:/Users/ACER/OneDrive/Desktop/FILE-X-REIMAGINE/docs/operator_manual.md)** — Walkthrough of the FXML JavaFX workspace, alert master lists, and active filesystem telemetry testing.
+*   **[🏗️ Architecture Blueprint](docs/architecture.md)** — Clean design layers, type-safe event buses, and bootstrapping.
+*   **[🛡️ Threat Heuristics Guide](docs/threat_detection.md)** — In-depth analysis of built-in security rules (Ransomware modify bursts, hidden dotfiles).
+*   **[🛡️ Security & Trust Model](docs/security_model.md)** — Agent security context, trust boundaries, and OS access control.
+*   **[🛠️ Developer Setup Guide](docs/development_setup.md)** — Local compile requirements, custom sandbox path resolutions, and IDE configurations.
+*   **[🧪 Testing & Verification Guide](docs/testing_guide.md)** — Core unit tests, integration paths, and concurrency limits.
+*   **[📊 Observability & Diagnostics](docs/observability.md)** — Structured key-value logging standards, MDC context propagation, and rolling file logs.
+*   **[🔍 Operational Troubleshooting](docs/troubleshooting.md)** — Diagnosing directory permissions, UI lags, and SQLite WAL write-waits.
+*   **[⚠️ Known Limitations](docs/known_limitations.md)** — In-memory backpressure, OS watch limits, and the product roadmap.
 
 ---
 
@@ -56,9 +60,9 @@ graph TD
         DB[("SQLite WAL Database (filex.db)")]
     end
 
-    subgraph Presentation & Operator UX [Operator Control Panel]
+    subgraph Presentation & Operator UX [SaaS Operator Panel]
         IWC["InvestigationWorkspaceController"]
-        UI["JavaFX Workspace Dashboard"]
+        UI["JavaFX SaaS Workspace UI"]
     end
 
     %% Pipeline Connections
@@ -153,52 +157,6 @@ FileX is equipped with five out-of-the-box, production-grade telemetry rules tha
 
 ---
 
-## 📂 Forensic Persistence Schema
-
-All security incidents, telemetry logs, and forensic timelines are maintained in a secure, relational database running SQLite in **WAL (Write-Ahead Logging)** mode with foreign keys enabled.
-
-### Database Tables and Columns
-
-```mermaid
-erDiagram
-    startup_log {
-        INTEGER id PK
-        TEXT started_at
-        TEXT app_version
-        TEXT hostname
-        TEXT os_name
-        TEXT java_version
-    }
-    incidents {
-        TEXT incident_id PK
-        TEXT title
-        TEXT description
-        TEXT severity
-        TEXT rule_name
-        TEXT status
-        TEXT created_at
-    }
-    incident_evidence {
-        TEXT evidence_id PK
-        TEXT incident_id FK
-        TEXT file_path
-        TEXT action_type
-        TEXT occurred_at
-    }
-    forensic_timeline {
-        TEXT timeline_id PK
-        TEXT incident_id FK
-        TEXT event_type
-        TEXT description
-        TEXT occurred_at
-    }
-    
-    incidents ||--o{ incident_evidence : "has many"
-    incidents ||--o{ forensic_timeline : "has many"
-```
-
----
-
 ## 🚀 Installation & Execution
 
 ### Prerequisites
@@ -212,14 +170,13 @@ erDiagram
 
 ### 2. Run the Application
 
-#### A. Standard Mode (Default current working directory monitoring)
+#### A. Standard Sandbox Mode (Monitors current sandbox folders)
 ```bash
 ./gradlew run
 ```
 
-#### B. Enterprise Production Mode (Custom directories monitoring)
-Provide custom system properties to focus the monitoring engine on specific threat spaces (like your `Downloads` and `Documents` folders). Ensure you wrap properties in double quotes inside PowerShell:
-
+#### B. Enterprise Production Mode (Focuses monitoring on specific host directories)
+Supply monitored directory target lists directly through JVM system flags:
 ```powershell
 .\gradlew.bat "-Dfilex.monitor.paths=C:\Users\ACER\Downloads,C:\Users\ACER\Documents" run
 ```
@@ -258,7 +215,6 @@ public final class MalwareNameRule implements DetectionRule {
     public DetectionResult evaluate(MonitoringEvent event, DetectionContext context) {
         if (event.path() != null) {
             String filename = event.path().getFileName().toString().toLowerCase();
-            // Flag files containing malicious threat names
             if (filename.contains("malware") || filename.contains("ransomware")) {
                 return DetectionResult.matched("File name matches dangerous threat signature.");
             }
@@ -276,30 +232,12 @@ appContext.detectionEngine().registerRule(new MalwareNameRule());
 
 ---
 
-## 📂 Project Directory Structure
+## 🤝 Contributing, Support, & Code of Conduct
 
-```
-FileX/
-├── src/main/java/com/filex/
-│   ├── app/              # Bootstrap lifecycle, root container (AppContext)
-│   ├── config/           # OS-aware path resolutions, AppConfig
-│   ├── controller/       # Thin JavaFX Controllers (pure presentation)
-│   ├── database/         # SQLite transaction manager, migrations DDL
-│   ├── detection/        # Parallel evaluation engine & behavioral rules
-│   ├── engine/           # Native OS WatchService monitor loop
-│   ├── event/            # Decoupled EventBus and thread-safe events
-│   ├── persistence/      # Incident persistence services
-│   ├── ui/               # Lazy-loaded, cached view navigation (ViewManager)
-│   └── workspace/        # Investigation workspace queries
-│
-├── src/main/resources/
-│   ├── fxml/             # Curated JavaFX view definitions
-│   ├── css/              # Slate modern layout stylesheets
-│   └── logback.xml       # Custom SLF4J rolling appenders
-│
-├── docs/phase_archives/  # Archived historical audit logs and design phases
-└── build.gradle.kts      # Clean Kotlin-DSL Gradle script
-```
+* **[🤝 Contribution Standards](CONTRIBUTING.md)** — Pull request guidelines, conventional commits, and branching frameworks.
+* **[📜 Code of Conduct](CODE_OF_CONDUCT.md)** — Project empathy pledges and professional community guidelines.
+* **[🏛️ Project Governance](GOVERNANCE.md)** — Decision-making policies, committees, and maintainership promotions.
+* **[🛡️ Security Vulnerability Reporting](SECURITY.md)** — Confidential reporting guidelines and security SLAs.
 
 ---
 
