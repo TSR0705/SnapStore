@@ -21,4 +21,5 @@ Welcome to the central technical documentation hub for **FileX**. This index gui
 ## 💻 3. Operational & Forensic Runbooks
 * **[💻 Operator & Investigation Manual](operator_manual.md)** — Renders, incident lists, evidence, and simulators.
 * **[🔍 Troubleshooting Runbook](troubleshooting.md)** — Fixes for file access warnings, UI lags, and SQLite locks.
-* **[⚠️ Known Limitations](known_limitations.md)** — OS file watcher boundaries, events backpressure, and roadmap.
+* **[⚠️ Known Limitations](known_limitations.md)** — OS file watcher boundaries, events backpressure, and database write-wait latency.
+* **[🗺️ Product Roadmap](roadmap.md)** — Future architectural milestones, feature additions, and security expansions.
