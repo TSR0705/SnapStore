@@ -189,7 +189,6 @@ class MonitoringEngineAuditTest {
         assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Should detect file in dynamically created nested structure");
     }
-
     // =========================================================================
     // SECTION 4: WATCHSERVICE LOOP AUDIT
     // =========================================================================
