@@ -2,6 +2,7 @@ package com.filex.controller;
 
 import com.filex.app.AppContext;
 import com.filex.investigation.EvidenceSummary;
+import com.filex.investigation.InvestigationCriteria;
 import com.filex.investigation.InvestigationResult;
 import com.filex.workspace.NavigationContext;
 import com.filex.workspace.WorkspaceService;
@@ -66,12 +67,14 @@ public final class EvidenceController {
     @FXML private ProgressIndicator loadingIndicator;
     @FXML private Label errorLabel;
     @FXML private Label statusLabel;
+    @FXML private Button traverseButton;
 
     private final ObservableList<EvidenceSummary> evidenceItems = FXCollections.observableArrayList();
     private final Set<String> visitedEvidence = new HashSet<>();
     private int currentTraversalDepth = 0;
     private String currentIncidentId;
     private InvestigationWorkspaceController workspaceController;
+    private EvidenceSummary selectedEvidence;
 
     /**
      * Constructor-based dependency injection.
@@ -97,6 +100,9 @@ public final class EvidenceController {
 
         // Wire up buttons
         backButton.setOnAction(e -> navigateBack());
+        if (traverseButton != null) {
+            traverseButton.setOnAction(e -> traverseRelatedEvidence());
+        }
 
         // Load evidence from workspace state
         WorkspaceState state = workspaceService.currentState();
@@ -156,8 +162,13 @@ public final class EvidenceController {
      * Handles evidence selection.
      */
     private void onEvidenceSelected(EvidenceSummary evidence) {
+        this.selectedEvidence = evidence;
+        
         if (evidence == null) {
             evidenceDetailArea.clear();
+            if (traverseButton != null) {
+                traverseButton.setDisable(true);
+            }
             return;
         }
 
@@ -172,7 +183,46 @@ public final class EvidenceController {
         
         evidenceDetailArea.setText(details.toString());
         
+        if (traverseButton != null) {
+            // Enable traversal if correlation ID exists, we haven't visited it, and depth isn't exceeded
+            boolean canTraverse = evidence.getCorrelationId() != null 
+                    && !evidence.getCorrelationId().isBlank()
+                    && !isTraversalDepthExceeded()
+                    && !isVisited(evidence.getCorrelationId()); // treat correlation ID as the visited marker for fanout protection
+            traverseButton.setDisable(!canTraverse);
+        }
+        
         log.debug("Evidence selected: {}", evidence.getEvidenceId());
+    }
+
+    /**
+     * Traverses to related evidence.
+     */
+    private void traverseRelatedEvidence() {
+        if (selectedEvidence == null || selectedEvidence.getCorrelationId() == null) {
+            return;
+        }
+        
+        String correlationId = selectedEvidence.getCorrelationId();
+        visitedEvidence.add(correlationId); // record visit
+        currentTraversalDepth++;
+        
+        setLoading(true);
+        clearError();
+        
+        InvestigationCriteria criteria = InvestigationCriteria.builder()
+                .correlationId(correlationId)
+                .build();
+                
+        workspaceService.findEvidenceAsync(
+                criteria,
+                0,
+                50, // Limit oversized fanout
+                this::displayEvidence,
+                error -> showError("Failed to traverse evidence: " + error.getMessage())
+        );
+        
+        log.info("Traversing to related evidence by correlation ID: {}, depth: {}", correlationId, currentTraversalDepth);
     }
 
     /**
