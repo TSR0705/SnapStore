@@ -5,6 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane fx:id="workspaceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.filex.controller.InvestigationWorkspaceController"
             prefWidth="1200" prefHeight="800">
     
     <!-- Top toolbar -->
