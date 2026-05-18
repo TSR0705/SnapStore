@@ -41,6 +41,7 @@ public final class IncidentPersistenceSubscriber {
 
     private final EventBus eventBus;
     private final IncidentPersistenceService persistenceService;
+    private volatile boolean started = false;
 
     // Track recent detection events for evidence linking
     // Maps detection ID -> DetectionEvent
@@ -63,7 +64,9 @@ public final class IncidentPersistenceSubscriber {
      * Starts subscribing to incident and detection events.
      */
     public void start() {
+        if (started) return;
         log.info("Starting incident persistence subscriber...");
+        started = true;
 
         // Subscribe to incident events
         eventBus.subscribe(IncidentCreatedEvent.class, this::onIncidentCreated);
@@ -83,7 +86,9 @@ public final class IncidentPersistenceSubscriber {
      * Stops subscribing to events.
      */
     public void stop() {
+        if (!started) return;
         log.info("Stopping incident persistence subscriber...");
+        started = false;
 
         // Unsubscribe from incident events
         eventBus.unsubscribe(IncidentCreatedEvent.class, this::onIncidentCreated);
@@ -100,6 +105,10 @@ public final class IncidentPersistenceSubscriber {
         recentDetections.clear();
 
         log.info("Incident persistence subscriber stopped");
+    }
+
+    public boolean isStarted() {
+        return started;
     }
 
     // -------------------------------------------------------------------------
