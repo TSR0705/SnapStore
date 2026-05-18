@@ -66,3 +66,6 @@ test-output/
 out/
 target/
 dist/
+
+# Local Dev Sandboxes
+filex_sandbox/
