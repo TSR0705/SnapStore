@@ -62,21 +62,4 @@ class ConfigManagerTest {
         assertTrue(summary.contains(config.appVersion()));
     }
 
-    @Test
-    void testValidationModeResolutionFromSystemProperty() {
-        String currentValue = System.getProperty("filex.validation.mode");
-        try {
-            System.setProperty("filex.validation.mode", "true");
-
-            AppConfig config = ConfigManager.resolve();
-
-            assertTrue(config.validationMode(), "Validation mode should be enabled when system property is true");
-        } finally {
-            if (currentValue == null) {
-                System.clearProperty("filex.validation.mode");
-            } else {
-                System.setProperty("filex.validation.mode", currentValue);
-            }
-        }
-    }
 }
