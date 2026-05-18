@@ -316,11 +316,7 @@ class InvestigationQueryServiceTest {
                 dbPath,
                 base.appName(),
                 base.appVersion(),
-                base.debugMode(),
-                base.demoMode(),
-                base.demoMonitorPath(),
-                base.demoAutoCreatePath(),
-                base.validationMode()
+                base.debugMode()
         );
     }
 }
