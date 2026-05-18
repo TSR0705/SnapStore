@@ -40,7 +40,10 @@ class FileEventRepositoryTest {
                 testDbPath,
                 config.appName(),
                 config.appVersion(),
-                config.debugMode()
+                config.debugMode(),
+                config.demoMode(),
+                config.demoMonitorPath(),
+                config.demoAutoCreatePath()
         );
         
         dbManager = new DatabaseManager(testConfig);
