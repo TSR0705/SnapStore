@@ -2,39 +2,169 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
 
-<VBox xmlns="http://javafx.com/javafx/21"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.filex.controller.OverviewController"
-      spacing="20" alignment="TOP_LEFT"
-      styleClass="view-container">
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.filex.controller.OverviewController"
+            fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+            styleClass="view-container">
 
-    <padding>
-        <Insets top="30" right="30" bottom="30" left="30"/>
-    </padding>
+    <content>
+        <VBox spacing="24" alignment="TOP_LEFT">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
 
-    <!-- Header -->
-    <Label fx:id="lblAppName" styleClass="view-title" text="FileX"/>
-    <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Version 1.0.0"/>
+            <!-- Header Section -->
+            <VBox spacing="4">
+                <Label fx:id="lblAppName" styleClass="view-title" text="FileX Threat Intel"/>
+                <Label fx:id="lblAppVersion" styleClass="view-subtitle" text="Surveillance Dashboard Active"/>
+            </VBox>
 
-    <!-- Status -->
-    <VBox spacing="10">
-        <Label text="Status:" styleClass="label-bold"/>
-        <Label fx:id="lblStatus" text="Initializing..." styleClass="status-label"/>
-    </VBox>
+            <Separator/>
 
-    <!-- Info -->
-    <VBox spacing="10">
-        <Label text="Phase 1A: Foundation Complete" styleClass="label-bold"/>
-        <Label text="✓ Application bootstrap" wrapText="true"/>
-        <Label text="✓ Configuration system" wrapText="true"/>
-        <Label text="✓ SQLite database initialized" wrapText="true"/>
-        <Label text="✓ Event bus ready" wrapText="true"/>
-        <Label text="✓ View navigation system" wrapText="true"/>
-        <Label text="✓ Logging infrastructure" wrapText="true"/>
-    </VBox>
+            <!-- Dashboard Cards Grid -->
+            <GridPane styleClass="dashboard-grid" hgap="20" vgap="20">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50.0" />
+                    <ColumnConstraints percentWidth="50.0" />
+                </columnConstraints>
 
-    <Label text="Ready for Phase 2 implementation." styleClass="info-text"/>
+                <!-- Protection Status Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="0" spacing="10">
+                    <Label text="Engine Status" styleClass="kpi-title"/>
+                    <Label fx:id="lblStatus" text="ACTIVE" styleClass="kpi-value, kpi-value-active"/>
+                </VBox>
 
-</VBox>
+                <!-- Events Processed Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="0" spacing="10">
+                    <Label text="Raw Events Normalized" styleClass="kpi-title"/>
+                    <Label fx:id="lblEvents" text="0" styleClass="kpi-value, kpi-value-accent"/>
+                </VBox>
+
+                <!-- Active Incidents Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="0" GridPane.rowIndex="1" spacing="10">
+                    <Label text="Total Security Incidents" styleClass="kpi-title"/>
+                    <Label fx:id="lblIncidents" text="0" styleClass="kpi-value, kpi-value-danger"/>
+                </VBox>
+
+                <!-- Monitored Folders Card -->
+                <VBox styleClass="kpi-card" GridPane.columnIndex="1" GridPane.rowIndex="1" spacing="10">
+                    <Label text="Monitored Folders" styleClass="kpi-title"/>
+                    <Label fx:id="lblPathCount" text="0" styleClass="kpi-value, kpi-value-warning"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Middle Dual-Column Section -->
+            <GridPane hgap="24" vgap="16">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50.0"/>
+                    <ColumnConstraints percentWidth="50.0"/>
+                </columnConstraints>
+
+                <!-- Left Column: Monitored Locations & System Telemetry -->
+                <VBox spacing="16" GridPane.columnIndex="0">
+                    <VBox spacing="10">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Label text="Actively Monitored Targets" styleClass="dashboard-section-title" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <Button fx:id="btnAddPath" text="+ Add Target" onAction="#onAddPath"
+                                    style="-fx-background-color: -color-accent; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 4 8 4 8; -fx-cursor: hand;"/>
+                        </HBox>
+                        <VBox fx:id="vboxPaths" spacing="8" styleClass="path-list-container">
+                            <!-- Dynamically populated -->
+                            <Label text="Acquiring host directory telemetry..." styleClass="monitored-path-item"/>
+                        </VBox>
+                    </VBox>
+
+                    <!-- Telemetry Stats Panel -->
+                    <VBox spacing="10">
+                        <Label text="Pipeline System Telemetry" styleClass="dashboard-section-title"/>
+                        <VBox spacing="10" styleClass="path-list-container">
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="OS Active Watch Handles:" styleClass="rule-name" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <Label fx:id="lblWatchCount" text="0" styleClass="rule-status-active"/>
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="Noise Chatter Squashed:" styleClass="rule-name" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <Label fx:id="lblDeduplicated" text="0" styleClass="kpi-value-accent" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="Threat Checks Evaluated:" styleClass="rule-name" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <Label fx:id="lblEvaluations" text="0" styleClass="kpi-value-warning" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="Spam Alerts Cooled Down:" styleClass="rule-name" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <Label fx:id="lblSuppressed" text="0" styleClass="kpi-value-danger" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </VBox>
+
+                <!-- Right Column: Loaded Threat Detection Rules -->
+                <VBox spacing="10" GridPane.columnIndex="1">
+                    <Label text="Active Threat Detection Rules" styleClass="dashboard-section-title"/>
+                    <VBox fx:id="vboxRules" spacing="8" styleClass="rules-list-container">
+                        <!-- Dynamically populated -->
+                        <Label text="Loading rule matrix..." styleClass="monitored-path-item"/>
+                    </VBox>
+                </VBox>
+            </GridPane>
+
+            <Separator/>
+
+            <!-- Attack Simulation Studio -->
+            <VBox spacing="10">
+                <Label text="Host Threat &amp; Surveillance Simulation Studio" styleClass="dashboard-section-title"/>
+                <Label text="Deploy isolated virtual threat patterns inside decoy folders to showcase real-time detection, correlation, and response."
+                       styleClass="view-subtitle"/>
+                <GridPane hgap="12" vgap="12" style="-fx-padding: 8 0 8 0;">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="20.0"/>
+                        <ColumnConstraints percentWidth="20.0"/>
+                        <ColumnConstraints percentWidth="20.0"/>
+                        <ColumnConstraints percentWidth="20.0"/>
+                        <ColumnConstraints percentWidth="20.0"/>
+                    </columnConstraints>
+
+                    <Button fx:id="btnSimRansom" text="💥 Ransomware" onAction="#onSimulateRansom"
+                            GridPane.columnIndex="0" maxWidth="Infinity"
+                            style="-fx-background-color: #3b1c1c; -fx-text-fill: #ff6666; -fx-border-color: #ff3333; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
+
+                    <Button fx:id="btnSimMassDelete" text="🗑️ Mass Deletion" onAction="#onSimulateMassDelete"
+                            GridPane.columnIndex="1" maxWidth="Infinity"
+                            style="-fx-background-color: #3b2c1c; -fx-text-fill: #ffb866; -fx-border-color: #ff9933; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
+
+                    <Button fx:id="btnSimRename" text="🔄 Extension Lock" onAction="#onSimulateRename"
+                            GridPane.columnIndex="2" maxWidth="Infinity"
+                            style="-fx-background-color: #3b3b1c; -fx-text-fill: #ffff66; -fx-border-color: #ffff33; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
+
+                    <Button fx:id="btnSimHidden" text="🕵️ Hidden Payload" onAction="#onSimulateHidden"
+                            GridPane.columnIndex="3" maxWidth="Infinity"
+                            style="-fx-background-color: #1c3b3b; -fx-text-fill: #66ffff; -fx-border-color: #33ffff; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
+
+                    <Button fx:id="btnSimSensitive" text="🔑 Sensitive Config" onAction="#onSimulateSensitive"
+                            GridPane.columnIndex="4" maxWidth="Infinity"
+                            style="-fx-background-color: #2d1c3b; -fx-text-fill: #d466ff; -fx-border-color: #b833ff; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
+                </GridPane>
+            </VBox>
+
+            <Separator/>
+
+            <!-- Bottom Span: Live Security Console Terminal Log -->
+            <VBox spacing="10">
+                <Label text="Live Security Console Event Feed" styleClass="dashboard-section-title"/>
+                <TextArea fx:id="txtTerminalLog" editable="false" wrapText="true"
+                          prefHeight="180" minHeight="120" styleClass="security-terminal"
+                          text="[SYSTEM] Live Cybersecurity Console stream initialized. Monitoring filesystem operations...&#10;"/>
+            </VBox>
+        </VBox>
+    </content>
+</ScrollPane>

@@ -1,6 +1,7 @@
 package com.filex.engine;
 
 import com.filex.event.EventBus;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,11 @@ public final class MonitoringEngine {
      * @throws MonitoringException if monitoring fails to start
      */
     public synchronized void start(List<Path> paths) throws MonitoringException {
+        log.info(TruthMarkers.TRUTH, "component=MonitoringEngine event=engine_starting roots="
+                + paths.stream()
+                        .map(p -> p.toString().replaceAll("[\\s\\p{Cntrl}]", "_"))
+                        .toList());
+
         if (state != MonitoringState.IDLE && state != MonitoringState.STOPPED) {
             throw new MonitoringException("Cannot start monitoring in state: " + state);
         }
@@ -90,7 +96,8 @@ public final class MonitoringEngine {
             // Initialize WatchService
             watchService = FileSystems.getDefault().newWatchService();
 
-            // Register all paths recursively
+            // Filter to valid roots first so the truth log reports the actual configured set.
+            List<Path> validRoots = new ArrayList<>();
             for (Path path : paths) {
                 if (!Files.exists(path)) {
                     log.warn("Path does not exist, skipping: {}", path);
@@ -100,9 +107,22 @@ public final class MonitoringEngine {
                     log.warn("Path is not a directory, skipping: {}", path);
                     continue;
                 }
+                validRoots.add(path);
+            }
+
+            log.info(TruthMarkers.TRUTH, "component=MonitoringEngine event=watch_roots_configured roots="
+                    + validRoots.stream()
+                            .map(p -> p.toString().replaceAll("[\\s\\p{Cntrl}]", "_"))
+                            .toList());
+
+            // Register all valid roots recursively
+            for (Path path : validRoots) {
                 registerRecursive(path);
                 monitoredRoots.add(path);
             }
+
+            log.info(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=total_dirs_registered count=" + watchKeyToPath.size());
 
             // Start watch loop thread
             watchExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -111,6 +131,8 @@ public final class MonitoringEngine {
                 return t;
             });
             watchExecutor.submit(this::watchLoop);
+            log.info(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=watch_loop_started thread=filex-watch-loop");
 
             state = MonitoringState.RUNNING;
             log.info("Monitoring engine started successfully. Watching {} directories",
@@ -123,6 +145,13 @@ public final class MonitoringEngine {
             eventBus.publish(new MonitoringStartedEvent(pathStrings));
 
         } catch (IOException e) {
+            log.error(TruthMarkers.TRUTH, "component=MonitoringEngine event=registration_failed path="
+                    + paths.stream()
+                            .map(p -> p.toString().replaceAll("[\\s\\p{Cntrl}]", "_"))
+                            .toList()
+                    + " err="
+                    + (e.getMessage() == null ? "null"
+                            : e.getMessage().replaceAll("[\\s\\p{Cntrl}]", "_")));
             state = MonitoringState.FAILED;
             throw new MonitoringException("Failed to start monitoring", e);
         }
@@ -204,6 +233,11 @@ public final class MonitoringEngine {
             monitoredRoots.add(path);
             log.info("Added monitored path: {}", path);
         } catch (IOException e) {
+            log.error(TruthMarkers.TRUTH, "component=MonitoringEngine event=registration_failed path="
+                    + path.toString().replaceAll("[\\s\\p{Cntrl}]", "_")
+                    + " err="
+                    + (e.getMessage() == null ? "null"
+                            : e.getMessage().replaceAll("[\\s\\p{Cntrl}]", "_")));
             throw new MonitoringException("Failed to register path: " + path, e);
         }
     }
@@ -213,6 +247,13 @@ public final class MonitoringEngine {
      */
     public MonitoringState getState() {
         return state;
+    }
+
+    /**
+     * Returns the set of actively monitored root directories.
+     */
+    public Set<Path> getMonitoredRoots() {
+        return Collections.unmodifiableSet(monitoredRoots);
     }
 
     /**
@@ -239,10 +280,15 @@ public final class MonitoringEngine {
      * Registers a directory and all its subdirectories recursively.
      */
     private void registerRecursive(Path root) throws IOException {
+        log.info(TruthMarkers.TRUTH, "component=MonitoringEngine event=recursive_registration_started root="
+                + root.toString().replaceAll("[\\s\\p{Cntrl}]", "_"));
+        final int[] regCount = {0};
         Files.walkFileTree(root, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                registerDirectory(dir);
+                if (registerDirectory(dir)) {
+                    regCount[0]++;
+                }
                 return FileVisitResult.CONTINUE;
             }
 
@@ -252,16 +298,19 @@ public final class MonitoringEngine {
                 return FileVisitResult.CONTINUE;
             }
         });
+        log.info(TruthMarkers.TRUTH, "component=MonitoringEngine event=recursive_registration_completed root="
+                + root.toString().replaceAll("[\\s\\p{Cntrl}]", "_")
+                + " dirs=" + regCount[0]);
     }
 
     /**
      * Registers a single directory with the WatchService.
      */
-    private void registerDirectory(Path dir) throws IOException {
+    private boolean registerDirectory(Path dir) throws IOException {
         // Check if already registered
         if (pathToWatchKey.containsKey(dir)) {
             log.trace("Directory already registered: {}", dir);
-            return;
+            return false;
         }
 
         WatchKey key = dir.register(
@@ -275,6 +324,7 @@ public final class MonitoringEngine {
         pathToWatchKey.put(dir, key);
 
         log.debug("Registered watch for directory: {}", dir);
+        return true;
     }
 
     /**
@@ -328,10 +378,28 @@ public final class MonitoringEngine {
         totalEventsDetected.incrementAndGet();
 
         WatchEvent.Kind<?> kind = event.kind();
+        
+        // Truth instrumentation: raw watch event details
+        log.debug(TruthMarkers.TRUTH,
+                "component=MonitoringEngine event=watch_event_received dir={} rawKind={} rawContext={}",
+                sanitizePath(dir), sanitize(kind.name()), 
+                event.context() != null ? sanitizePath(event.context()) : "null");
+
+        Path filenameForLog = (event.context() instanceof Path) ? (Path) event.context() : null;
+        Path rPathForLog = filenameForLog != null ? dir.resolve(filenameForLog) : dir;
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Monitoring action=event_received path={} rawKind={}",
+                sanitizePath(rPathForLog), sanitize(kind.name()));
 
         // Handle OVERFLOW
         if (kind == StandardWatchEventKinds.OVERFLOW) {
             totalOverflowEvents.incrementAndGet();
+            log.warn(TruthMarkers.TRUTH,
+                    "TRUTH stage=Monitoring action=overflow path={} reason=overflow",
+                    sanitizePath(dir));
+            log.warn(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=overflow_detected dir={}",
+                    sanitizePath(dir));
             log.warn("WatchService OVERFLOW detected for directory: {}", dir);
             eventBus.publish(new MonitoringOverflowEvent(dir));
             return;
@@ -350,12 +418,23 @@ public final class MonitoringEngine {
             // Path may not exist (e.g., DELETE event)
             fullPath = fullPath.toAbsolutePath().normalize();
         }
+        
+        // Truth instrumentation: resolved absolute path
+        log.debug(TruthMarkers.TRUTH,
+                "component=MonitoringEngine event=path_resolved rawContext={} absolutePath={}",
+                sanitizePath(filename), sanitizePath(fullPath));
 
         // Determine operation
         String operation = kind.name();
 
         // Deduplication
         if (!deduplicator.shouldProcess(fullPath, operation)) {
+            log.trace(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=event_deduplicated path={} operation={}",
+                    sanitizePath(fullPath), sanitize(operation));
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Monitoring action=deduplicated path={} result=skipped",
+                    sanitizePath(fullPath));
             return; // Duplicate event, skip
         }
 
@@ -381,31 +460,92 @@ public final class MonitoringEngine {
     private void publishNormalizedEvent(Path path, WatchEvent.Kind<?> kind) {
         try {
             MonitoringEvent event;
+            String eventType;
 
             if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                 if (Files.isDirectory(path)) {
                     event = new RawDirectoryCreatedEvent(path);
+                    eventType = "DIRECTORY_CREATED";
                 } else {
                     event = new RawFileCreatedEvent(path);
+                    eventType = "FILE_CREATED";
                 }
             } else if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
                 event = new RawFileModifiedEvent(path);
+                eventType = "FILE_MODIFIED";
             } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
                 event = new RawFileDeletedEvent(path);
+                eventType = "FILE_DELETED";
             } else {
                 log.warn("Unknown event kind: {}", kind);
                 return;
             }
 
+            // Truth instrumentation: normalized event published
+            log.info(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=normalized_event_published type={} path={} eventId={} timestamp={}",
+                    sanitize(eventType), sanitizePath(path), sanitize(event.eventId()),
+                    event.occurredAt().toEpochMilli());
+
             // Publish async to avoid blocking watch loop
             boolean queued = eventBus.tryPublishAsync(event);
             if (!queued) {
+                log.warn(TruthMarkers.TRUTH,
+                        "component=MonitoringEngine event=eventbus_queue_full eventId={} type={}",
+                        sanitize(event.eventId()), sanitize(eventType));
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Monitoring action=event_published type={} path={} eventId={} timestamp={} result=failure reason=queue_full",
+                        sanitize(eventType), sanitizePath(path), sanitize(event.eventId()),
+                        event.occurredAt().toEpochMilli());
                 log.warn("Failed to queue monitoring event (EventBus full): {}", event);
+            } else {
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Monitoring action=event_published type={} path={} eventId={} timestamp={} result=success",
+                        sanitize(eventType), sanitizePath(path), sanitize(event.eventId()),
+                        event.occurredAt().toEpochMilli());
+                log.trace(TruthMarkers.TRUTH,
+                        "component=MonitoringEngine event=eventbus_queued eventId={} type={}",
+                        sanitize(event.eventId()), sanitize(eventType));
             }
 
         } catch (Exception e) {
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Monitoring action=event_published type=UNKNOWN path={} result=failure reason=exception err={}",
+                    sanitizePath(path), sanitize(e.getMessage()));
+            log.error(TruthMarkers.TRUTH,
+                    "component=MonitoringEngine event=publish_failed path={} err={}",
+                    sanitizePath(path), sanitize(e.getMessage()), e);
             log.error("Failed to publish monitoring event for path: {}", path, e);
         }
+    }
+
+    /**
+     * Sanitizes a path for structured logging.
+     */
+    private static String sanitizePath(Object path) {
+        if (path == null) {
+            return "null";
+        }
+        return sanitize(path.toString());
+    }
+
+    /**
+     * Sanitizes a value for structured logging.
+     */
+    private static String sanitize(String value) {
+        if (value == null) {
+            return "null";
+        }
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isWhitespace(c) || Character.isISOControl(c)) {
+                sb.append('_');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -414,6 +554,13 @@ public final class MonitoringEngine {
     private void handleInvalidatedKey(WatchKey key, Path dir) {
         totalInvalidatedWatches.incrementAndGet();
         log.warn("WatchKey invalidated for directory: {}", dir);
+
+        log.warn(TruthMarkers.TRUTH,
+                "TRUTH stage=Monitoring action=watchkey_invalidated path={} reason=reset_failed",
+                sanitizePath(dir));
+        log.warn(TruthMarkers.TRUTH,
+                "component=MonitoringEngine event=watchkey_invalidated path={}",
+                sanitizePath(dir));
 
         // Remove from mappings
         watchKeyToPath.remove(key);

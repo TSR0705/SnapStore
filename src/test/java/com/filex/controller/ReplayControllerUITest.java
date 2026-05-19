@@ -32,22 +32,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith({ApplicationExtension.class, MockitoExtension.class})
+@ExtendWith(ApplicationExtension.class)
 public class ReplayControllerUITest {
 
-    static {
-        System.setProperty("testfx.robot", "glass");
-        System.setProperty("testfx.headless", "true");
-        System.setProperty("prism.order", "sw");
-        System.setProperty("prism.text", "t2k");
-        System.setProperty("java.awt.headless", "true");
-    }
-
-    @Mock
-    private AppContext appContext;
-
-    @Mock
-    private WorkspaceService workspaceService;
+    private final AppContext appContext = mock(AppContext.class);
+    private final WorkspaceService workspaceService = mock(WorkspaceService.class);
 
     private ReplayController controller;
 
@@ -101,11 +90,13 @@ public class ReplayControllerUITest {
                 List.of(event1), Instant.now(), Instant.now(), 0, 500, 1, false);
 
         Platform.runLater(() -> {
-            // ReplayController.displayReplay is private, but it gets called via the callback from replayFromCheckpointAsync
+            // ReplayController.displayReplay is private, but it gets called via the
+            // callback from replayFromCheckpointAsync
             // In the test, we'll capture the callback
         });
-        
-        // Instead of capturing, let's just make sure the mock captures the success callback
+
+        // Instead of capturing, let's just make sure the mock captures the success
+        // callback
         doAnswer(invocation -> {
             Consumer<ReplayNavigationService.ReplayWindow> onSuccess = invocation.getArgument(1);
             onSuccess.accept(window);

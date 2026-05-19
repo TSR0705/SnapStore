@@ -1,0 +1,17 @@
+# CODEOWNERS for FileX repository
+
+# Global fallback
+* @TSR0705
+
+# Core Backend engines
+/src/main/java/com/filex/engine/ @TSR0705
+/src/main/java/com/filex/detection/ @TSR0705
+
+# Forensic Persistence & Migrations
+/src/main/java/com/filex/database/ @TSR0705
+/src/main/java/com/filex/persistence/ @TSR0705
+
+# UI Views and Layout styles
+/src/main/resources/fxml/ @TSR0705
+/src/main/resources/css/ @TSR0705
+/src/main/resources/com/filex/view/ @TSR0705

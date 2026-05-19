@@ -226,10 +226,12 @@ public final class WorkspaceService {
      */
     private void saveSessionAsync(WorkspaceState state) {
         CompletableFuture.runAsync(() -> {
-            try {
-                session.save(state);
-            } catch (WorkspaceException e) {
-                log.warn("Failed to save workspace session", e);
+            synchronized (stateLock) {
+                try {
+                    session.save(state);
+                } catch (WorkspaceException e) {
+                    log.warn("Failed to save workspace session", e);
+                }
             }
         }, queryExecutor);
     }
@@ -578,11 +580,13 @@ public final class WorkspaceService {
         log.info("Shutting down WorkspaceService...");
         
         // Save final session state
-        try {
-            session.save(currentState);
-            log.info("Final workspace session saved");
-        } catch (WorkspaceException e) {
-            log.warn("Failed to save final session", e);
+        synchronized (stateLock) {
+            try {
+                session.save(currentState);
+                log.info("Final workspace session saved");
+            } catch (WorkspaceException e) {
+                log.warn("Failed to save final session", e);
+            }
         }
         
         queryExecutor.shutdown();

@@ -1,0 +1,101 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.filex'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'com.filex.app.Main'
+}
+
+repositories {
+    mavenCentral()
+}
+
+// 100% Platform-agnostic OS classifier resolver using standard Java system properties
+def osName = System.getProperty("os.name").toLowerCase()
+def osArch = System.getProperty("os.arch").toLowerCase()
+def osClassifier = "win"
+if (osName.contains("win")) {
+    osClassifier = "win"
+} else if (osName.contains("mac")) {
+    if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+        osClassifier = "mac-aarch64"
+    } else {
+        osClassifier = "mac"
+    }
+} else {
+    if (osArch.contains("aarch64") || osArch.contains("arm")) {
+        osClassifier = "linux-aarch64"
+    } else {
+        osClassifier = "linux"
+    }
+}
+
+dependencies {
+    // Core SQLite Forensic Engine
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    
+    // Core Observability and rolling diagnostics
+    implementation 'org.slf4j:slf4j-api:2.0.13'
+    implementation 'ch.qos.logback:logback-classic:1.5.6'
+    
+    // Dynamic platform-specific JavaFX binaries (Bypasses buggy Gradle plugin)
+    def javafxVersion = "21.0.2"
+    implementation "org.openjfx:javafx-controls:$javafxVersion:$osClassifier"
+    implementation "org.openjfx:javafx-fxml:$javafxVersion:$osClassifier"
+    implementation "org.openjfx:javafx-graphics:$javafxVersion:$osClassifier"
+    implementation "org.openjfx:javafx-base:$javafxVersion:$osClassifier"
+    
+    // Unit & Integration Verification Suite
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    
+    // Headless Forensic UI Testing
+    testImplementation 'org.testfx:testfx-core:4.0.18'
+    testImplementation 'org.testfx:testfx-junit5:4.0.18'
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+    
+    // Core Mocking Utilities
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.filex.app.Main',
+            'Implementation-Title': 'FileX',
+            'Implementation-Version': version
+        )
+    }
+}
+
+tasks.withType(JavaExec) {
+    System.getProperties().each { key, value ->
+        if (key.toString().startsWith("filex.")) {
+            systemProperty key.toString(), value
+        }
+    }
+}

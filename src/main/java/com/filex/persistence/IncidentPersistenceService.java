@@ -8,6 +8,7 @@ import com.filex.model.IncidentEvidenceEntity;
 import com.filex.repository.ForensicTimelineRepository;
 import com.filex.repository.IncidentEvidenceRepository;
 import com.filex.repository.IncidentRepository;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,19 +80,62 @@ public final class IncidentPersistenceService {
         Objects.requireNonNull(incident, "incident must not be null");
         Objects.requireNonNull(detection, "detection must not be null");
 
+        final String op = "persistNewIncident";
+        final long startMs = System.currentTimeMillis();
+        log.debug(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceService event=tx_begin op={} incidentId={}",
+                op, incident.getIncidentId());
+
         try {
             transactionTemplate.executeVoid(conn -> {
                 // 1. Persist incident
                 IncidentEntity incidentEntity = mapToEntity(incident);
-                incidentRepository.insert(incidentEntity);
+                long incidentStartMs = System.currentTimeMillis();
+                log.debug(TruthMarkers.TRUTH,
+                        "component=IncidentPersistenceService event=incident_write_attempt incidentId={}",
+                        incident.getIncidentId());
+                try {
+                    incidentRepository.insert(incidentEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=incident_write_result incidentId={} outcome=ok durationMs={}",
+                            incident.getIncidentId(), System.currentTimeMillis() - incidentStartMs);
+                } catch (RuntimeException | SQLException ex) {
+                    log.error(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=incident_write_result incidentId={} outcome=fail durationMs={}",
+                            incident.getIncidentId(), System.currentTimeMillis() - incidentStartMs);
+                    throw ex;
+                }
 
                 // 2. Persist evidence
                 IncidentEvidenceEntity evidenceEntity = createEvidenceEntity(incident, detection);
-                evidenceRepository.insert(evidenceEntity);
+                log.debug(TruthMarkers.TRUTH,
+                        "component=IncidentPersistenceService event=evidence_write_attempt incidentId={} evidenceId={}",
+                        incident.getIncidentId(), evidenceEntity.getEvidenceId());
+                try {
+                    evidenceRepository.insert(evidenceEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=evidence_write_result evidenceId={} outcome=ok",
+                            evidenceEntity.getEvidenceId());
+                } catch (RuntimeException | SQLException ex) {
+                    log.error(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=evidence_write_result evidenceId={} outcome=fail",
+                            evidenceEntity.getEvidenceId());
+                    throw ex;
+                }
 
                 // 3. Persist timeline record
                 ForensicTimelineEntity timelineEntity = createIncidentCreatedTimeline(incident, detection);
-                timelineRepository.insert(timelineEntity);
+                try {
+                    timelineRepository.insert(timelineEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=timeline_write_result timelineId={} seq={} outcome=ok",
+                            timelineEntity.getTimelineId(), timelineEntity.getSequenceNumber());
+                } catch (RuntimeException | SQLException ex) {
+                    log.error(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=timeline_write_result timelineId={} seq={} outcome=fail",
+                            timelineEntity.getTimelineId(), timelineEntity.getSequenceNumber());
+                    throw ex;
+                }
 
                 log.info("Persisted new incident: incidentId={}, detectionId={}", 
                         incident.getIncidentId(), detection.eventId());
@@ -101,9 +145,16 @@ public final class IncidentPersistenceService {
             totalEvidencePersisted.incrementAndGet();
             totalTimelineRecords.incrementAndGet();
 
+            log.info(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceService event=tx_commit op={} incidentId={} durationMs={}",
+                    op, incident.getIncidentId(), System.currentTimeMillis() - startMs);
+
         } catch (Exception e) {
             totalPersistenceFailures.incrementAndGet();
             totalTransactionRollbacks.incrementAndGet();
+            log.error(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceService event=tx_rollback op={} incidentId={} err={}",
+                    op, incident.getIncidentId(), e.getMessage(), e);
             log.error("Failed to persist new incident: incidentId={}", incident.getIncidentId(), e);
             throw new PersistenceException("Failed to persist new incident: " + incident.getIncidentId(), e);
         }
@@ -129,22 +180,65 @@ public final class IncidentPersistenceService {
         Objects.requireNonNull(incident, "incident must not be null");
         Objects.requireNonNull(updateReason, "updateReason must not be null");
 
+        final String op = "persistIncidentUpdate";
+        final long startMs = System.currentTimeMillis();
+        log.debug(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceService event=tx_begin op={} incidentId={}",
+                op, incident.getIncidentId());
+
         try {
             transactionTemplate.executeVoid(conn -> {
                 // 1. Update incident
                 IncidentEntity incidentEntity = mapToEntity(incident);
-                incidentRepository.update(incidentEntity);
+                long incidentStartMs = System.currentTimeMillis();
+                log.debug(TruthMarkers.TRUTH,
+                        "component=IncidentPersistenceService event=incident_write_attempt incidentId={}",
+                        incident.getIncidentId());
+                try {
+                    incidentRepository.update(incidentEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=incident_write_result incidentId={} outcome=ok durationMs={}",
+                            incident.getIncidentId(), System.currentTimeMillis() - incidentStartMs);
+                } catch (RuntimeException | SQLException ex) {
+                    log.error(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=incident_write_result incidentId={} outcome=fail durationMs={}",
+                            incident.getIncidentId(), System.currentTimeMillis() - incidentStartMs);
+                    throw ex;
+                }
 
                 // 2. Persist evidence if detection provided
                 if (detection != null) {
                     IncidentEvidenceEntity evidenceEntity = createEvidenceEntity(incident, detection);
-                    evidenceRepository.insert(evidenceEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=evidence_write_attempt incidentId={} evidenceId={}",
+                            incident.getIncidentId(), evidenceEntity.getEvidenceId());
+                    try {
+                        evidenceRepository.insert(evidenceEntity);
+                        log.debug(TruthMarkers.TRUTH,
+                                "component=IncidentPersistenceService event=evidence_write_result evidenceId={} outcome=ok",
+                                evidenceEntity.getEvidenceId());
+                    } catch (RuntimeException | SQLException ex) {
+                        log.error(TruthMarkers.TRUTH,
+                                "component=IncidentPersistenceService event=evidence_write_result evidenceId={} outcome=fail",
+                                evidenceEntity.getEvidenceId());
+                        throw ex;
+                    }
                     totalEvidencePersisted.incrementAndGet();
                 }
 
                 // 3. Persist timeline record
                 ForensicTimelineEntity timelineEntity = createIncidentUpdatedTimeline(incident, detection, updateReason);
-                timelineRepository.insert(timelineEntity);
+                try {
+                    timelineRepository.insert(timelineEntity);
+                    log.debug(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=timeline_write_result timelineId={} seq={} outcome=ok",
+                            timelineEntity.getTimelineId(), timelineEntity.getSequenceNumber());
+                } catch (RuntimeException | SQLException ex) {
+                    log.error(TruthMarkers.TRUTH,
+                            "component=IncidentPersistenceService event=timeline_write_result timelineId={} seq={} outcome=fail",
+                            timelineEntity.getTimelineId(), timelineEntity.getSequenceNumber());
+                    throw ex;
+                }
 
                 log.debug("Persisted incident update: incidentId={}, reason={}", 
                         incident.getIncidentId(), updateReason);
@@ -152,9 +246,16 @@ public final class IncidentPersistenceService {
 
             totalTimelineRecords.incrementAndGet();
 
+            log.info(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceService event=tx_commit op={} incidentId={} durationMs={}",
+                    op, incident.getIncidentId(), System.currentTimeMillis() - startMs);
+
         } catch (Exception e) {
             totalPersistenceFailures.incrementAndGet();
             totalTransactionRollbacks.incrementAndGet();
+            log.error(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceService event=tx_rollback op={} incidentId={} err={}",
+                    op, incident.getIncidentId(), e.getMessage(), e);
             log.error("Failed to persist incident update: incidentId={}", incident.getIncidentId(), e);
             throw new PersistenceException("Failed to persist incident update: " + incident.getIncidentId(), e);
         }
@@ -204,6 +305,30 @@ public final class IncidentPersistenceService {
         } catch (SQLException e) {
             log.error("Failed to find incident: {}", incidentId, e);
             throw new PersistenceException("Failed to find incident: " + incidentId, e);
+        }
+    }
+
+    /**
+     * Returns the total count of all incidents in the database.
+     */
+    public long getIncidentCount() {
+        try {
+            return incidentRepository.count();
+        } catch (SQLException e) {
+            log.error("Failed to count incidents in database", e);
+            return 0;
+        }
+    }
+
+    /**
+     * Returns the total count of incidents in the database with a specific severity.
+     */
+    public long getIncidentCountBySeverity(String severity) {
+        try {
+            return incidentRepository.countBySeverity(severity);
+        } catch (SQLException e) {
+            log.error("Failed to count incidents in database by severity: {}", severity, e);
+            return 0;
         }
     }
 

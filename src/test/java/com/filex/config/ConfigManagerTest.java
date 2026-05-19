@@ -61,4 +61,5 @@ class ConfigManagerTest {
         assertTrue(summary.contains(config.appName()));
         assertTrue(summary.contains(config.appVersion()));
     }
+
 }

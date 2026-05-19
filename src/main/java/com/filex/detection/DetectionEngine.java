@@ -2,6 +2,7 @@ package com.filex.detection;
 
 import com.filex.engine.*;
 import com.filex.event.EventBus;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,9 +115,22 @@ public final class DetectionEngine {
             // Register default rules
             registerDefaultRules();
 
+            String ruleNames = rules.stream()
+                    .map(DetectionRule::name)
+                    .map(DetectionEngine::sanitize)
+                    .collect(Collectors.joining(","));
+            log.info(TruthMarkers.TRUTH,
+                    "component=DetectionEngine event=rules_registered count=" + rules.size()
+                            + " names=[" + ruleNames + "]");
+
             // Set state to RUNNING before starting evaluation workers
             // This prevents race condition where workers exit immediately
             state = DetectionState.RUNNING;
+
+            int queueCapacity = evaluationQueue.remainingCapacity() + evaluationQueue.size();
+            log.info(TruthMarkers.TRUTH,
+                    "component=DetectionEngine event=engine_started workers=" + EVALUATION_THREADS
+                            + " queueCapacity=" + queueCapacity);
 
             // Start evaluation workers (after state is RUNNING)
             for (int i = 0; i < EVALUATION_THREADS; i++) {
@@ -190,6 +204,13 @@ public final class DetectionEngine {
     }
 
     /**
+     * Returns an unmodifiable list of all registered detection rules.
+     */
+    public List<DetectionRule> getRules() {
+        return Collections.unmodifiableList(rules);
+    }
+
+    /**
      * Returns a snapshot of detection metrics.
      */
     public DetectionMetrics getMetrics() {
@@ -208,9 +229,47 @@ public final class DetectionEngine {
         );
     }
 
+    /**
+     * Resets engine state for validation runs. Only callable when engine is IDLE/STOPPED.
+     */
+    public synchronized void resetForValidation() {
+        if (state != DetectionState.IDLE && state != DetectionState.STOPPED) {
+            throw new IllegalStateException(
+                "DetectionEngine.resetForValidation() requires IDLE/STOPPED, current=" + state);
+        }
+        eventHistory.clear();
+        lastDetectionTime.clear();
+        if (evaluationQueue != null) {
+            evaluationQueue.clear();
+        }
+        totalEvaluations.set(0);
+        totalDetections.set(0);
+        totalSuppressedDetections.set(0);
+        totalEvaluationFailures.set(0);
+        totalFailedPublishes.set(0);
+        log.info(TruthMarkers.TRUTH,
+            "component=DetectionEngine event=reset_for_validation_complete");
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    private static String sanitize(String value) {
+        if (value == null) {
+            return "null";
+        }
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (Character.isWhitespace(c) || Character.isISOControl(c)) {
+                sb.append('_');
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
 
     private void registerDefaultRules() {
         registerRule(new com.filex.detection.rules.MassDeletionRule());
@@ -225,12 +284,29 @@ public final class DetectionEngine {
             return;
         }
 
+        String pathStr = (event.path() != null) ? sanitize(event.path().toString()) : "n/a";
+        log.debug(TruthMarkers.TRUTH,
+                "component=DetectionEngine event=detection_event_received type="
+                        + event.getClass().getSimpleName()
+                        + " eventId=" + sanitize(event.eventId())
+                        + " path=" + pathStr);
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Detection action=event_received type={} eventId={} path={}",
+                event.getClass().getSimpleName(), sanitize(event.eventId()), pathStr);
+
         // Add to event history
         addToEventHistory(event);
 
         // Queue for evaluation (non-blocking)
         boolean queued = evaluationQueue.offer(event);
+        log.debug(TruthMarkers.TRUTH,
+                "component=DetectionEngine event=detection_enqueue accepted=" + queued
+                        + " depth=" + evaluationQueue.size()
+                        + " eventId=" + sanitize(event.eventId()));
         if (!queued) {
+            log.warn(TruthMarkers.TRUTH,
+                    "component=DetectionEngine event=queue_overflow droppedEventId="
+                            + sanitize(event.eventId()));
             log.warn("Evaluation queue full, dropping event: {}", event.getClass().getSimpleName());
         } else {
             log.debug("Queued event for evaluation: {}", event.getClass().getSimpleName());
@@ -258,19 +334,36 @@ public final class DetectionEngine {
     }
 
     private void evaluationLoop() {
+        log.info(TruthMarkers.TRUTH,
+                "component=DetectionEngine event=worker_started thread="
+                        + sanitize(Thread.currentThread().getName()));
         log.debug("Detection evaluation thread started: {}", Thread.currentThread().getName());
 
         while (state == DetectionState.RUNNING) {
             try {
                 MonitoringEvent event = evaluationQueue.poll(100, TimeUnit.MILLISECONDS);
                 if (event != null) {
-                    evaluateEvent(event);
+                    // Propagate MDC correlation identifier across the thread pool boundary
+                    String correlationId = event.correlationId();
+                    try {
+                        if (correlationId != null) {
+                            org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, correlationId);
+                        }
+                        evaluateEvent(event);
+                    } finally {
+                        org.slf4j.MDC.remove(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
+                    }
                 }
             } catch (InterruptedException e) {
                 log.debug("Evaluation thread interrupted");
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
+                log.error(TruthMarkers.TRUTH,
+                        "component=DetectionEngine event=worker_crash thread="
+                                + sanitize(Thread.currentThread().getName())
+                                + " err=" + sanitize(String.valueOf(e.getMessage())),
+                        e);
                 log.error("Unexpected error in evaluation loop", e);
             }
         }
@@ -293,15 +386,49 @@ public final class DetectionEngine {
 
             try {
                 totalEvaluations.incrementAndGet();
+                log.debug(TruthMarkers.TRUTH,
+                        "component=DetectionEngine event=rule_eval_started rule="
+                                + sanitize(rule.name())
+                                + " eventId=" + sanitize(event.eventId()));
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Detection action=rule_evaluation_started rule={} eventId={}",
+                        sanitize(rule.name()), sanitize(event.eventId()));
+                
+                long startEval = System.nanoTime();
                 DetectionResult result = rule.evaluate(context);
+                long evalDurationMs = (System.nanoTime() - startEval) / 1_000_000L;
+                long endToEndLatencyMs = java.time.Duration.between(event.occurredAt(), java.time.Instant.now()).toMillis();
+                
+                log.debug(TruthMarkers.TRUTH,
+                        "component=DetectionEngine event=rule_eval_outcome rule="
+                                + sanitize(rule.name())
+                                + " detected=" + result.isDetected()
+                                + " eventId=" + sanitize(event.eventId()));
 
                 if (result.isDetected()) {
                     log.info("Rule {} detected suspicious activity", rule.name());
+                    log.info(TruthMarkers.TRUTH,
+                            "TRUTH stage=Detection action=rule_evaluated rule={} eventId={} result=matched description={} evalDurationMs={} endToEndLatencyMs={}",
+                            sanitize(rule.name()), sanitize(event.eventId()), sanitize(result.description()),
+                            evalDurationMs, endToEndLatencyMs);
                     handleDetection(rule, result, event);
+                } else {
+                    log.info(TruthMarkers.TRUTH,
+                            "TRUTH stage=Detection action=rule_evaluated rule={} eventId={} result=no_match evalDurationMs={} endToEndLatencyMs={}",
+                            sanitize(rule.name()), sanitize(event.eventId()), evalDurationMs, endToEndLatencyMs);
                 }
 
             } catch (Exception e) {
                 totalEvaluationFailures.incrementAndGet();
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Detection action=rule_evaluated rule={} eventId={} result=failure err={}",
+                        sanitize(rule.name()), sanitize(event.eventId()), sanitize(e.getMessage()));
+                log.error(TruthMarkers.TRUTH,
+                        "component=DetectionEngine event=rule_exception rule="
+                                + sanitize(rule.name())
+                                + " eventId=" + sanitize(event.eventId())
+                                + " err=" + sanitize(String.valueOf(e.getMessage())),
+                                e);
                 log.error("Rule evaluation failed: {} - {}", rule.name(), e.getMessage(), e);
                 // Continue with other rules (failure isolation)
             }
@@ -327,6 +454,14 @@ public final class DetectionEngine {
 
         if (lastDetection != null && (now - lastDetection) < DETECTION_COOLDOWN_MS) {
             totalSuppressedDetections.incrementAndGet();
+            log.debug(TruthMarkers.TRUTH,
+                    "component=DetectionEngine event=detection_suppressed rule="
+                            + sanitize(rule.name())
+                            + " reason=cooldown lastFiredMsAgo=" + (now - lastDetection));
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Detection action=detection_cooldown rule={} eventId={} path={} result=suppressed",
+                    sanitize(rule.name()), sanitize(event.eventId()),
+                    (event.path() != null) ? sanitize(event.path().toString()) : "n/a");
             log.trace("Detection suppressed (cooldown): {}", rule.name());
             return;
         }
@@ -343,17 +478,31 @@ public final class DetectionEngine {
     private boolean publishDetectionEvent(DetectionRule rule, DetectionResult result, MonitoringEvent event) {
         try {
             DetectionEvent detectionEvent = createDetectionEvent(rule, result, event);
-            
+            log.info(TruthMarkers.TRUTH,
+                    "component=DetectionEngine event=detection_emitted rule="
+                            + sanitize(rule.name())
+                            + " severity=" + sanitize(String.valueOf(result.severity()))
+                            + " confidence=" + result.confidence()
+                            + " detectionId=" + sanitize(detectionEvent.eventId())
+                            + " eventId=" + sanitize(event.eventId()));
+
             // Use async publish to avoid blocking evaluation threads
             boolean queued = eventBus.tryPublishAsync(detectionEvent);
             
             if (queued) {
                 log.info("Detection published: {} - {}", rule.name(), result.description());
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Detection action=detection_published rule={} severity={} confidence={} detectionId={} eventId={} result=success",
+                        sanitize(rule.name()), sanitize(result.severity().name()), sanitize(result.confidence().name()),
+                        sanitize(detectionEvent.eventId()), sanitize(event.eventId()));
                 return true;
             } else {
                 totalFailedPublishes.incrementAndGet();
                 log.error("Failed to publish detection event (EventBus queue full): {} - {}",
                         rule.name(), result.description());
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Detection action=detection_published rule={} result=failure reason=queue_full",
+                        sanitize(rule.name()));
                 return false;
             }
 

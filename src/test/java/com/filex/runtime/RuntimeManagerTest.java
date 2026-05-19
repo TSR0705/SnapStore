@@ -10,12 +10,9 @@ import com.filex.event.RuntimeState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -33,9 +30,12 @@ public class RuntimeManagerTest {
     private IncidentPersistenceSubscriber persistenceSubscriber;
     private RuntimeManager runtimeManager;
 
+    private com.filex.database.DatabaseManager databaseManager;
+
     @BeforeEach
     void setUp() {
         config = mock(AppConfig.class);
+        databaseManager = mock(com.filex.database.DatabaseManager.class);
         eventBus = mock(EventBus.class);
         monitoringEngine = mock(MonitoringEngine.class);
         detectionEngine = mock(DetectionEngine.class);
@@ -43,14 +43,12 @@ public class RuntimeManagerTest {
         persistenceSubscriber = mock(IncidentPersistenceSubscriber.class);
 
         runtimeManager = new RuntimeManager(
-                config, eventBus, monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber
+                config, databaseManager, eventBus, monitoringEngine, detectionEngine, alertEngine, persistenceSubscriber
         );
     }
 
     @Test
     void testStartupOrder() throws Exception {
-        when(config.demoMode()).thenReturn(false);
-
         runtimeManager.start();
 
         InOrder inOrder = inOrder(persistenceSubscriber, detectionEngine, alertEngine);
@@ -58,19 +56,6 @@ public class RuntimeManagerTest {
         inOrder.verify(detectionEngine).start();
         inOrder.verify(alertEngine).start();
 
-        assertEquals(RuntimeState.RUNNING, runtimeManager.getCurrentState());
-    }
-
-    @Test
-    void testDemoModeActivation() throws Exception {
-        Path demoPath = tempDir.resolve("demo-watch");
-        when(config.demoMode()).thenReturn(true);
-        when(config.demoMonitorPath()).thenReturn(demoPath);
-        when(config.demoAutoCreatePath()).thenReturn(true);
-
-        runtimeManager.start();
-
-        verify(monitoringEngine).start(Collections.singletonList(demoPath));
         assertEquals(RuntimeState.RUNNING, runtimeManager.getCurrentState());
     }
 

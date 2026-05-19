@@ -132,6 +132,7 @@ class AsyncSafetyTest {
                 .build();
         
         workspaceService.updateState(state);
+        Thread.sleep(300); // Allow async save to complete
         
         // Shutdown to save session
         workspaceService.shutdown();
@@ -189,10 +190,7 @@ class AsyncSafetyTest {
                 dbPath,
                 base.appName(),
                 base.appVersion(),
-                base.debugMode(),
-                base.demoMode(),
-                base.demoMonitorPath(),
-                base.demoAutoCreatePath()
+                base.debugMode()
         );
     }
 }

@@ -1,0 +1,35 @@
+# Continuous Integration Pipeline for FileX
+
+name: CI Build & Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build & Verify Java ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        java-version: [ 21 ]
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ matrix.java-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java-version }}
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    - name: Grant Execute Permission to Gradlew
+      run: chmod +x gradlew
+
+    - name: Build and Run Java Verification Suite
+      run: xvfb-run ./gradlew build --no-daemon

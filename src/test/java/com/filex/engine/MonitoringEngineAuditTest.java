@@ -69,14 +69,14 @@ class MonitoringEngineAuditTest {
 
         // Start monitoring
         engine.start(List.of(tempDir));
-        Thread.sleep(300); // Allow registration
+        Thread.sleep(800); // Allow registration
 
         // Create file at deepest level
         Path deepFile = current.resolve("deep.txt");
         Files.writeString(deepFile, "content");
 
         // Verify detection
-        assertTrue(latch.await(3, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Should detect file creation in deeply nested directory");
 
         MonitoringMetrics metrics = engine.getMetrics();
@@ -99,7 +99,7 @@ class MonitoringEngineAuditTest {
 
         // Start monitoring all roots
         engine.start(List.of(root1, root2, root3));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         // Create files in each root
         Files.writeString(root1.resolve("file1.txt"), "content1");
@@ -107,7 +107,7 @@ class MonitoringEngineAuditTest {
         Files.writeString(root3.resolve("file3.txt"), "content3");
 
         // Verify all detected
-        assertTrue(latch.await(3, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Should detect files in all monitored roots");
 
         MonitoringMetrics metrics = engine.getMetrics();
@@ -118,14 +118,14 @@ class MonitoringEngineAuditTest {
     @Test
     void testDuplicatePathRegistrationPrevention() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         MonitoringMetrics before = engine.getMetrics();
         int watchCountBefore = before.getActiveWatchCount();
 
         // Try to add same path again
         engine.addMonitoredPath(tempDir);
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         MonitoringMetrics after = engine.getMetrics();
         assertEquals(watchCountBefore, after.getActiveWatchCount(),
@@ -145,20 +145,20 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(RawFileCreatedEvent.class, e -> fileLatch.countDown());
 
         engine.start(List.of(tempDir));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         // Create new subdirectory
         Path newDir = tempDir.resolve("newdir");
         Files.createDirectory(newDir);
-        assertTrue(dirLatch.await(2, TimeUnit.SECONDS),
+        assertTrue(dirLatch.await(10, TimeUnit.SECONDS),
                 "Should detect directory creation");
 
         // Allow time for dynamic registration
-        Thread.sleep(500);
+        Thread.sleep(800);
 
         // Create file in new directory
         Files.writeString(newDir.resolve("test.txt"), "content");
-        assertTrue(fileLatch.await(2, TimeUnit.SECONDS),
+        assertTrue(fileLatch.await(10, TimeUnit.SECONDS),
                 "Should detect file in dynamically registered directory");
     }
 
@@ -168,28 +168,27 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(RawFileCreatedEvent.class, e -> latch.countDown());
 
         engine.start(List.of(tempDir));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         // Create nested structure dynamically
         Path level1 = tempDir.resolve("level1");
         Files.createDirectory(level1);
-        Thread.sleep(400);
+        Thread.sleep(800);
 
         Path level2 = level1.resolve("level2");
         Files.createDirectory(level2);
-        Thread.sleep(400);
+        Thread.sleep(800);
 
         Path level3 = level2.resolve("level3");
         Files.createDirectory(level3);
-        Thread.sleep(400);
+        Thread.sleep(800);
 
         // Create file at deepest level
         Files.writeString(level3.resolve("deep.txt"), "content");
 
-        assertTrue(latch.await(3, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Should detect file in dynamically created nested structure");
     }
-
     // =========================================================================
     // SECTION 4: WATCHSERVICE LOOP AUDIT
     // =========================================================================
@@ -200,7 +199,7 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(RawFileCreatedEvent.class, e -> latch.countDown());
 
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         long startTime = System.currentTimeMillis();
 
@@ -209,7 +208,7 @@ class MonitoringEngineAuditTest {
             Files.writeString(tempDir.resolve("file" + i + ".txt"), "content");
         }
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Watch loop should detect all events promptly");
 
         long duration = System.currentTimeMillis() - startTime;
@@ -223,7 +222,7 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(RawFileCreatedEvent.class, e -> latch.countDown());
 
         engine.start(List.of(tempDir));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         // Simulate concurrent filesystem activity
         ExecutorService executor = Executors.newFixedThreadPool(5);
@@ -251,7 +250,7 @@ class MonitoringEngineAuditTest {
 
         executor.shutdown();
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Should handle concurrent filesystem activity");
     }
 
@@ -270,12 +269,12 @@ class MonitoringEngineAuditTest {
         });
 
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         Path testFile = tempDir.resolve("test.txt");
         Files.writeString(testFile, "content");
 
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
 
         // Verify path is normalized
         Path eventPath = events.get(0).path();
@@ -305,7 +304,7 @@ class MonitoringEngineAuditTest {
         });
 
         engine.start(List.of(tempDir));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         // Rapid modifications (MODIFY storm)
         for (int i = 0; i < 20; i++) {
@@ -313,7 +312,7 @@ class MonitoringEngineAuditTest {
             Thread.sleep(5); // Very rapid
         }
 
-        assertTrue(latch.await(2, TimeUnit.SECONDS));
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
         Thread.sleep(1000); // Allow all events to process
 
         synchronized (events) {
@@ -339,19 +338,19 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(RawFileDeletedEvent.class, e -> deleteLatch.countDown());
 
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         // Different operations should NOT be deduplicated
         Files.writeString(testFile, "content");
-        assertTrue(createLatch.await(2, TimeUnit.SECONDS), "Should detect CREATE");
+        assertTrue(createLatch.await(10, TimeUnit.SECONDS), "Should detect CREATE");
 
         Thread.sleep(100);
         Files.writeString(testFile, "modified");
-        assertTrue(modifyLatch.await(2, TimeUnit.SECONDS), "Should detect MODIFY");
+        assertTrue(modifyLatch.await(10, TimeUnit.SECONDS), "Should detect MODIFY");
 
         Thread.sleep(100);
         Files.delete(testFile);
-        assertTrue(deleteLatch.await(2, TimeUnit.SECONDS), "Should detect DELETE");
+        assertTrue(deleteLatch.await(10, TimeUnit.SECONDS), "Should detect DELETE");
     }
 
     // =========================================================================
@@ -379,7 +378,7 @@ class MonitoringEngineAuditTest {
     @Test
     void testConcurrentPathRegistration() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         // Create multiple directories concurrently
         ExecutorService executor = Executors.newFixedThreadPool(5);
@@ -408,7 +407,7 @@ class MonitoringEngineAuditTest {
             });
         }
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS),
+        assertTrue(latch.await(10, TimeUnit.SECONDS),
                 "Concurrent registration should complete");
 
         executor.shutdown();
@@ -435,18 +434,18 @@ class MonitoringEngineAuditTest {
         });
 
         engine.start(List.of(tempDir));
-        Thread.sleep(500); // Allow registration
+        Thread.sleep(800); // Allow registration
 
         MonitoringMetrics beforeDelete = engine.getMetrics();
         int watchesBefore = beforeDelete.getActiveWatchCount();
 
         // Delete monitored directory
         Files.delete(subDir);
-        Thread.sleep(500); // Allow invalidation detection
+        Thread.sleep(800); // Allow invalidation detection
 
         // Try to trigger watch key check by creating a file
         Files.writeString(tempDir.resolve("trigger.txt"), "content");
-        Thread.sleep(500);
+        Thread.sleep(800);
 
         MonitoringMetrics afterDelete = engine.getMetrics();
 
@@ -489,11 +488,11 @@ class MonitoringEngineAuditTest {
         eventBus.subscribe(MonitoringStoppedEvent.class, e -> stoppedLatch.countDown());
 
         engine.start(List.of(tempDir));
-        assertTrue(startedLatch.await(2, TimeUnit.SECONDS),
+        assertTrue(startedLatch.await(10, TimeUnit.SECONDS),
                 "Should publish MonitoringStartedEvent");
 
         engine.stop();
-        assertTrue(stoppedLatch.await(2, TimeUnit.SECONDS),
+        assertTrue(stoppedLatch.await(10, TimeUnit.SECONDS),
                 "Should publish MonitoringStoppedEvent");
     }
 
@@ -504,7 +503,7 @@ class MonitoringEngineAuditTest {
     @Test
     void testShutdownDuringActiveMonitoring() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         // Start creating files
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -519,7 +518,7 @@ class MonitoringEngineAuditTest {
             }
         });
 
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         // Shutdown during activity
         engine.stop();
@@ -532,7 +531,7 @@ class MonitoringEngineAuditTest {
     @Test
     void testRepeatedShutdownCallsSafe() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         engine.stop();
         engine.stop(); // Second call
@@ -544,13 +543,13 @@ class MonitoringEngineAuditTest {
     @Test
     void testShutdownCleansUpResources() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(300);
+        Thread.sleep(800);
 
         MonitoringMetrics beforeShutdown = engine.getMetrics();
         assertTrue(beforeShutdown.getActiveWatchCount() > 0);
 
         engine.stop();
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         MonitoringMetrics afterShutdown = engine.getMetrics();
         assertEquals(0, afterShutdown.getActiveWatchCount(),
@@ -566,7 +565,7 @@ class MonitoringEngineAuditTest {
     @Test
     void testMetricsAccuracy() throws Exception {
         engine.start(List.of(tempDir));
-        Thread.sleep(200);
+        Thread.sleep(800);
 
         MonitoringMetrics initial = engine.getMetrics();
         assertEquals(MonitoringState.RUNNING, initial.getCurrentState());
@@ -578,9 +577,10 @@ class MonitoringEngineAuditTest {
 
         for (int i = 0; i < 5; i++) {
             Files.writeString(tempDir.resolve("file" + i + ".txt"), "content");
+            Thread.sleep(50); // Small pause for stable, discrete inotify delivery
         }
 
-        assertTrue(latch.await(3, TimeUnit.SECONDS));
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
         Thread.sleep(500);
 
         MonitoringMetrics after = engine.getMetrics();

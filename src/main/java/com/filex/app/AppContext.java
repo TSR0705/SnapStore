@@ -73,7 +73,7 @@ public final class AppContext {
         this.alertEngine = Objects.requireNonNull(alertEngine, "alertEngine must not be null");
         this.incidentPersistenceService = Objects.requireNonNull(incidentPersistenceService, "incidentPersistenceService must not be null");
         this.incidentPersistenceSubscriber = Objects.requireNonNull(incidentPersistenceSubscriber, "incidentPersistenceSubscriber must not be null");
-        this.runtimeManager = new com.filex.runtime.RuntimeManager(config, eventBus, monitoringEngine, detectionEngine, alertEngine, incidentPersistenceSubscriber);
+        this.runtimeManager = new com.filex.runtime.RuntimeManager(config, databaseManager, eventBus, monitoringEngine, detectionEngine, alertEngine, incidentPersistenceSubscriber);
     }
 
     /**

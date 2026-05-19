@@ -1,234 +1,247 @@
-# FileX — Endpoint Telemetry & Suspicious File Activity Monitor
+# <p align="center"><img src="pictures/filex-logo.png" alt="FileX Logo" width="100" style="border-radius: 20%;" /><br>FileX — Enterprise Endpoint Telemetry & Threat Detection Agent</p>
 
-**Phase 1A: Foundation Complete**
-
-FileX is a production-grade endpoint monitoring system designed to detect and track suspicious file activity in real-time. This repository contains the foundational architecture for a scalable, event-driven desktop agent.
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-21-orange.svg?style=for-the-badge&logo=java" alt="Java 21" />
+  <img src="https://img.shields.io/badge/JavaFX-21-blue.svg?style=for-the-badge&logo=javafx" alt="JavaFX 21" />
+  <img src="https://img.shields.io/badge/Database-SQLite-green.svg?style=for-the-badge&logo=sqlite" alt="SQLite" />
+  <img src="https://img.shields.io/badge/Architecture-Clean-lightgrey.svg?style=for-the-badge" alt="Clean Architecture" />
+  <img src="https://img.shields.io/badge/Status-SaaS--Production--Ready-brightgreen.svg?style=for-the-badge" alt="SaaS Ready" />
+</p>
 
 ---
 
-## 🏗️ Architecture Overview
+**FileX** is a production-grade, highly optimized local security agent designed to monitor host filesystem operations at the OS API layer, analyze telemetry in real-time using parallel heuristics, and persist security incidents inside a relational forensic archive. 
 
-FileX follows **clean architecture** principles with strict separation of concerns:
+Built on Java 21, JavaFX, and an asynchronous event-driven architecture, FileX stands out with zero global singleton abuse, clean constructor dependency injection, strict thread boundary isolation, and a premium SaaS-grade threat briefing workspace.
 
+---
+
+## 📚 Technical Documentation Index
+
+Explore our comprehensive technical blueprints, developer setup guides, and contributor standards:
+
+*   **[🏗️ Architecture Blueprint](docs/architecture.md)** — Clean design layers, type-safe event buses, and bootstrapping.
+*   **[🛡️ Threat Heuristics Guide](docs/threat_detection.md)** — In-depth analysis of built-in security rules (Ransomware modify bursts, hidden dotfiles).
+*   **[🛡️ Security & Trust Model](docs/security_model.md)** — Agent security context, trust boundaries, and OS access control.
+*   **[🛠️ Developer Setup Guide](docs/development_setup.md)** — Local compile requirements, custom sandbox path resolutions, and IDE configurations.
+*   **[🧪 Testing & Verification Guide](docs/testing_guide.md)** — Core unit tests, integration paths, and concurrency limits.
+*   **[📊 Observability & Diagnostics](docs/observability.md)** — Structured key-value logging standards, MDC context propagation, and rolling file logs.
+*   **[🔍 Operational Troubleshooting](docs/troubleshooting.md)** — Diagnosing directory permissions, UI lags, and SQLite WAL write-waits.
+*   **[⚠️ Known Limitations](docs/known_limitations.md)** — In-memory backpressure, OS watch limits, and the product roadmap.
+
+---
+
+## 🏗️ Premium System Architecture
+
+FileX utilizes a highly decoupled, reactive architectural pipeline. Below is the end-to-end telemetry workflow detailing how a physical filesystem event on the operating system transitions into a persistent threat record inside the operator's workspace UI:
+
+```mermaid
+graph TD
+    %% Core Nodes
+    OS["Windows Kernel (ReadDirectoryChangesW) / Linux inotify"]
+    
+    subgraph Monitoring Pipeline [Engine telemetry Layer]
+        WS["java.nio.file.WatchService"]
+        ME["MonitoringEngine (filex-watch-loop)"]
+        RC["RawFileCreatedEvent"]
+        RM["RawFileModifiedEvent"]
+        RD["RawFileDeletedEvent"]
+    end
+
+    subgraph Event & Threat Pipeline [Reactive Core Layer]
+        EB["EventBus (Type-safe dispatcher)"]
+        DE["DetectionEngine (filex-detection-evaluator)"]
+        AE["AlertEngine"]
+        IC["IncidentCreatedEvent"]
+    end
+
+    subgraph Forensic Persistence [Infrastructure Storage Layer]
+        IPS["IncidentPersistenceSubscriber"]
+        DB[("SQLite WAL Database (filex.db)")]
+    end
+
+    subgraph Presentation & Operator UX [SaaS Operator Panel]
+        IWC["InvestigationWorkspaceController"]
+        UI["JavaFX SaaS Workspace UI"]
+    end
+
+    %% Pipeline Connections
+    OS -->|OS Native Events| WS
+    WS -->|Capture Event| ME
+    ME -->|Normalize| RC
+    ME -->|Normalize| RM
+    ME -->|Normalize| RD
+    
+    RC & RM & RD -->|Publish| EB
+    EB -->|Asynchronous Dispatch| DE
+    
+    DE -->|Evaluate Threat Rules| AE
+    AE -->|Generate Incident| IC
+    IC -->|Publish| EB
+    
+    EB -->|Capture Incident| IPS
+    IPS -->|Transaction Write| DB
+    
+    EB -->|Live UI Refresh Callback| IWC
+    IWC -->|Asynchronous SQL Query| DB
+    IWC -->|Render Cards| UI
+
+    %% Custom Styling
+    style OS fill:#ff7675,stroke:#333,stroke-width:2px,color:#fff
+    style DB fill:#55efc4,stroke:#333,stroke-width:2px,color:#000
+    style UI fill:#0984e3,stroke:#333,stroke-width:2px,color:#fff
+    style DE fill:#ffeaa7,stroke:#333,stroke-width:2px,color:#000
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Presentation Layer                       │
-│  (JavaFX Controllers, FXML Views, ViewManager)              │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│                    Application Layer                         │
-│  (AppContext, Bootstrap, Event Bus, Services)               │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│                   Infrastructure Layer                       │
-│  (DatabaseManager, ConfigManager, Repositories)             │
-└─────────────────────────────────────────────────────────────┘
+
+---
+
+## ⚡ Concurrency & Thread Isolation Model
+
+To maintain ultra-low overhead and guarantee that local monitoring never starves the operator dashboard or bottlenecks the operating system, FileX enforces a strict thread-boundary model:
+
+*   **`filex-watch-loop` (Daemon):** Locks onto OS-native filesystem blocking hooks. It captures, normalizes, and exits the telemetry cycle within microseconds.
+*   **`filex-detection-evaluator` (Executor Pool):** Dedicated worker thread pool handling parallel matching heuristics. Evaluation scales dynamically without ever blocking directory events.
+*   **`JavaFX Application Thread`:** Purely handles workspace UI rendering and FXML lazy caching. Avoids lag during bulk telemetry processing.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Kernel as Windows Kernel
+    participant Watcher as filex-watch-loop
+    participant EBus as EventBus (Sync)
+    participant Evaluator as filex-detection-evaluator
+    participant Persister as SQLite Thread
+    participant UI as JavaFX UI Thread
+
+    Kernel->>Watcher: Write Event Generated
+    activate Watcher
+    Watcher->>EBus: Publish RawFileCreatedEvent
+    deactivate Watcher
+    
+    activate EBus
+    EBus->>Evaluator: Dispatch (Non-blocking queue)
+    deactivate EBus
+
+    activate Evaluator
+    Note over Evaluator: Evaluate active rules in parallel
+    Evaluator->>EBus: Publish IncidentCreatedEvent
+    deactivate Evaluator
+
+    activate EBus
+    EBus->>Persister: Commit (IncidentPersistenceService)
+    EBus->>UI: Platform.runLater (Notify UI)
+    deactivate EBus
+
+    activate Persister
+    Persister->>Persister: Write SQLite WAL Transaction
+    deactivate Persister
+
+    activate UI
+    UI->>UI: Refresh Workspace Dashboard
+    deactivate UI
 ```
 
-### Key Design Decisions
+---
 
-- **No Singleton Abuse**: Dependencies are passed explicitly through constructors
-- **Cached View Navigation**: FXML is loaded once and reused — no repeated parsing
-- **Event-Driven Foundation**: Decoupled components communicate via EventBus
-- **Fail-Fast Bootstrap**: Application terminates immediately if initialization fails
-- **Explicit Lifecycle Management**: Resources are acquired and released in strict order
+## 🛡️ Active Threat Protection Rules
+
+FileX is equipped with five out-of-the-box, production-grade telemetry rules that run concurrently against system events:
+
+| Threat Rule | Objective | Behavioral Heuristic Pattern | Severity |
+| :--- | :--- | :--- | :--- |
+| **`MassDeletionRule`** | Anti-Ransomware / Data Destruction | Checks if more than `N` files are deleted in a folder within a 5-second sliding window. | **HIGH** |
+| **`RapidModificationRule`** | Mass Encryption / Data Locking | Detects quick, consecutive modifications to the same file or a high frequency of modifications across folders within a sliding temporal window. | **HIGH** |
+| **`SuspiciousExtensionRenameRule`** | Masquerading / Double Extension | Flags attempts to disguise files or hide payloads (e.g., naming a file `invoice.pdf.exe`). | **MEDIUM** |
+| **`HiddenFileCreationRule`** | Hidden Persistence Setup | Flags files created with OS hidden attributes or starting with leading dots in user spaces. | **MEDIUM** |
+| **`SensitiveDirectoryActivityRule`** | System Path Compromise | Triggers immediate alerts upon write attempts in crucial system paths (e.g., `System32`, `etc`, `AppData`). | **CRITICAL** |
 
 ---
 
-## 🚀 Phase 1A: What's Implemented
-
-### ✅ Core Infrastructure
-
-- [x] **Configuration System** — OS-aware directory resolution (AppData on Windows, XDG on Linux)
-- [x] **SQLite Database** — WAL mode, foreign key enforcement, schema versioning
-- [x] **Logging** — SLF4J + Logback with rolling file appenders
-- [x] **Event Bus** — Synchronous, type-safe event dispatch
-- [x] **AppContext** — Root dependency container (no service locator pattern)
-
-### ✅ JavaFX Application Shell
-
-- [x] **Bootstrap Lifecycle** — Ordered initialization with fail-fast semantics
-- [x] **ViewManager** — Lazy-loaded, cached view navigation
-- [x] **Controller Factory** — Constructor-based dependency injection
-- [x] **Main Layout** — Sidebar navigation + content area
-- [x] **Overview View** — Placeholder landing page
-
-### ✅ Engineering Standards
-
-- [x] **Gradle Build** — Java 21 toolchain, JavaFX plugin, dependency management
-- [x] **Test Foundation** — JUnit 5 with smoke tests for bootstrap and config
-- [x] **Clean Package Structure** — Logical separation by layer and concern
-- [x] **Production-Grade .gitignore** — Excludes build artifacts, logs, and databases
-
----
-
-## 📦 Tech Stack
-
-| Component       | Technology                  |
-|-----------------|-----------------------------|
-| Language        | Java 21                     |
-| UI Framework    | JavaFX 21                   |
-| Build Tool      | Gradle 8.x                  |
-| Database        | SQLite (JDBC)               |
-| Logging         | SLF4J + Logback             |
-| Testing         | JUnit 5                     |
-
----
-
-## 🛠️ Build & Run
+## 🚀 Installation & Execution
 
 ### Prerequisites
+*   **Java Development Kit (JDK 21 or later)**
+*   PowerShell or Bash terminal
 
-- **Java 21** (JDK 21 or later)
-- **Gradle** (wrapper included — no manual install required)
-
-### Build
-
+### 1. Build the Project
 ```bash
 ./gradlew build
 ```
 
-### Run
+### 2. Run the Application
 
+#### A. Standard Sandbox Mode (Monitors current sandbox folders)
 ```bash
 ./gradlew run
 ```
 
-### Run Tests
-
-```bash
-./gradlew test
+#### B. Enterprise Production Mode (Focuses monitoring on specific host directories)
+Supply monitored directory target lists directly through JVM system flags:
+```powershell
+.\gradlew.bat "-Dfilex.monitor.paths=C:\Users\ACER\Downloads,C:\Users\ACER\Documents" run
 ```
 
 ---
 
-## 📂 Project Structure
+## 🧩 Developer Extension Guide: Writing Custom Rules
 
+FileX's dynamic architecture allows you to easily plug in new rules at runtime without modifying the core detection pipeline. Simply implement the `DetectionRule` interface and register it with the `DetectionEngine`.
+
+### Custom Rule Template:
+
+```java
+package com.filex.detection.rules;
+
+import com.filex.detection.*;
+
+public final class MalwareNameRule implements DetectionRule {
+    
+    @Override
+    public String name() {
+        return "MalwareFileNameDetection";
+    }
+
+    @Override
+    public String description() {
+        return "Detects files containing malicious signatures in their filenames";
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    @Override
+    public DetectionResult evaluate(MonitoringEvent event, DetectionContext context) {
+        if (event.path() != null) {
+            String filename = event.path().getFileName().toString().toLowerCase();
+            if (filename.contains("malware") || filename.contains("ransomware")) {
+                return DetectionResult.matched("File name matches dangerous threat signature.");
+            }
+        }
+        return DetectionResult.notMatched();
+    }
+}
 ```
-FileX/
-├── src/main/java/com/filex/
-│   ├── app/              # Bootstrap, AppContext, FileXApplication
-│   ├── config/           # ConfigManager, AppConfig
-│   ├── controller/       # JavaFX controllers (thin, no business logic)
-│   ├── database/         # DatabaseManager, schema bootstrap
-│   ├── event/            # EventBus, AppEvent hierarchy
-│   ├── ui/               # ViewManager, ViewId, ControllerFactory
-│   ├── detection/        # (Phase 2+) File activity detection engine
-│   ├── engine/           # (Phase 2+) Monitoring engine
-│   ├── model/            # (Phase 2+) Domain entities
-│   ├── repository/       # (Phase 2+) Data access layer
-│   ├── service/          # (Phase 2+) Business logic services
-│   └── util/             # (Future) Shared utilities
-│
-├── src/main/resources/
-│   ├── fxml/             # JavaFX view definitions
-│   ├── css/              # Application stylesheets
-│   └── logback.xml       # Logging configuration
-│
-├── src/test/java/        # Unit and integration tests
-├── logs/                 # Application logs (gitignored)
-├── data/                 # SQLite database (gitignored)
-└── build.gradle          # Gradle build configuration
+
+### Registration at Boot:
+```java
+// Register directly via the public API of the DetectionEngine
+appContext.detectionEngine().registerRule(new MalwareNameRule());
 ```
 
 ---
 
-## 🗂️ Database Schema (Phase 1A)
+## 🤝 Contributing, Support, & Code of Conduct
 
-### `schema_version`
-Tracks applied schema migrations for future versioning.
-
-| Column      | Type    | Description                  |
-|-------------|---------|------------------------------|
-| id          | INTEGER | Primary key                  |
-| version     | TEXT    | Schema version identifier    |
-| applied_at  | TEXT    | ISO 8601 timestamp           |
-| description | TEXT    | Migration description        |
-
-### `app_startup_log`
-Audit log of application launches.
-
-| Column       | Type    | Description                  |
-|--------------|---------|------------------------------|
-| id           | INTEGER | Primary key                  |
-| started_at   | TEXT    | ISO 8601 timestamp           |
-| app_version  | TEXT    | Application version          |
-| hostname     | TEXT    | Machine hostname             |
-| os_name      | TEXT    | Operating system name        |
-| java_version | TEXT    | Java runtime version         |
+* **[🤝 Contribution Standards](CONTRIBUTING.md)** — Pull request guidelines, conventional commits, and branching frameworks.
+* **[📜 Code of Conduct](CODE_OF_CONDUCT.md)** — Project empathy pledges and professional community guidelines.
+* **[🏛️ Project Governance](GOVERNANCE.md)** — Decision-making policies, committees, and maintainership promotions.
+* **[🛡️ Security Vulnerability Reporting](SECURITY.md)** — Confidential reporting guidelines and security SLAs.
 
 ---
 
-## 🔧 Configuration
+## 📜 Licensing & Authors
 
-### Environment Variables
-
-| Variable       | Description                          | Default                          |
-|----------------|--------------------------------------|----------------------------------|
-| `FILEX_HOME`   | Override application home directory  | OS-specific (AppData, XDG, etc.) |
-| `FILEX_DEBUG`  | Enable debug mode                    | `false`                          |
-
-### Directory Resolution (Priority Order)
-
-1. **`FILEX_HOME` environment variable** (explicit override)
-2. **OS-specific user data directory**:
-   - Windows: `%APPDATA%\FileX`
-   - macOS: `~/Library/Application Support/FileX`
-   - Linux: `~/.local/share/FileX`
-3. **Fallback**: `~/FileX`
-
----
-
-## 🧪 Testing Strategy
-
-### Phase 1A Tests
-
-- **Bootstrap Smoke Test**: Validates full initialization sequence
-- **Config Resolution Test**: Verifies directory creation and path resolution
-- **Database Initialization Test**: Confirms schema creation and connection lifecycle
-
-### Future Phases
-
-- Unit tests for detection algorithms
-- Integration tests for monitoring engine
-- UI tests for JavaFX controllers
-- Performance tests for event throughput
-
----
-
-## 🚧 Roadmap
-
-### Phase 1B: Monitoring Engine Foundation
-- [ ] File system watcher integration
-- [ ] Event capture pipeline
-- [ ] Baseline activity profiling
-
-### Phase 2: Detection Logic
-- [ ] Suspicious file pattern detection
-- [ ] Behavioral anomaly scoring
-- [ ] Alert generation and persistence
-
-### Phase 3: Reporting & Analytics
-- [ ] Dashboard with real-time metrics
-- [ ] Historical activity reports
-- [ ] Export to CSV/JSON
-
-### Phase 4: Sync & Backend Integration
-- [ ] REST API client for central server
-- [ ] Encrypted telemetry upload
-- [ ] Remote configuration management
-
----
-
-## 📜 License
-
-Proprietary — All Rights Reserved
-
----
-
-## 👤 Author
-
-**TSR0705**  
-GitHub: [TSR0705](https://github.com/TSR0705)
+*   **Author:** TSR0705  
+*   **License:** Proprietary — All Rights Reserved.

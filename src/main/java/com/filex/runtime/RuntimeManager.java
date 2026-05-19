@@ -6,15 +6,19 @@ import com.filex.config.AppConfig;
 import com.filex.detection.DetectionEngine;
 import com.filex.engine.MonitoringEngine;
 import com.filex.event.EventBus;
+import com.filex.event.EventBusMetrics;
 import com.filex.event.RuntimeState;
 import com.filex.event.RuntimeStateChangedEvent;
+import com.filex.database.DatabaseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Responsibilities:
  * <ul>
  *   <li>Own engine startup and shutdown orchestration</li>
- *   <li>Implement demo mode activation and path registration</li>
+ *   <li>Activate production-grade directory monitoring</li>
  *   <li>Track system health and operational metrics</li>
  *   <li>Provide observability into the event pipeline</li>
  * </ul>
@@ -34,6 +38,7 @@ public final class RuntimeManager {
     private static final Logger log = LoggerFactory.getLogger(RuntimeManager.class);
 
     private final AppConfig config;
+    private final DatabaseManager databaseManager;
     private final EventBus eventBus;
     private final MonitoringEngine monitoringEngine;
     private final DetectionEngine detectionEngine;
@@ -47,6 +52,7 @@ public final class RuntimeManager {
 
     public RuntimeManager(
             AppConfig config,
+            DatabaseManager databaseManager,
             EventBus eventBus,
             MonitoringEngine monitoringEngine,
             DetectionEngine detectionEngine,
@@ -54,6 +60,7 @@ public final class RuntimeManager {
             IncidentPersistenceSubscriber persistenceSubscriber
     ) {
         this.config = Objects.requireNonNull(config, "config must not be null");
+        this.databaseManager = Objects.requireNonNull(databaseManager, "databaseManager must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus must not be null");
         this.monitoringEngine = Objects.requireNonNull(monitoringEngine, "monitoringEngine must not be null");
         this.detectionEngine = Objects.requireNonNull(detectionEngine, "detectionEngine must not be null");
@@ -89,12 +96,9 @@ public final class RuntimeManager {
             alertEngine.start();
             log.info("Alert engine activated.");
 
-            // 4. Handle Demo Mode or Monitored Path registration
-            if (config.demoMode()) {
-                activateDemoMode();
-            } else {
-                log.info("Demo mode disabled. Monitoring idle until paths are registered.");
-            }
+            // 4. Activate production directory monitoring
+            log.info("Activating production directory monitoring...");
+            activateProductionMonitoring();
 
             transitionTo(RuntimeState.RUNNING);
             log.info("FileX engines started successfully.");
@@ -142,32 +146,47 @@ public final class RuntimeManager {
     }
 
     /**
-     * Activates demo mode monitoring.
+     * Activates production monitoring based on configured system properties/environment paths.
      */
-    private void activateDemoMode() throws IOException, com.filex.engine.MonitoringException {
-        Path demoPath = config.demoMonitorPath();
-        if (demoPath == null) {
-            log.error("Demo mode enabled but no monitor path configured.");
-            return;
+    private void activateProductionMonitoring() throws IOException, com.filex.engine.MonitoringException {
+        String pathsProperty = System.getProperty("filex.monitor.paths");
+        if (pathsProperty == null || pathsProperty.isBlank()) {
+            pathsProperty = System.getenv("FILEX_MONITOR_PATHS");
         }
 
-        log.info("Activating demo mode for path: {}", demoPath);
-
-        if (!Files.exists(demoPath)) {
-            if (config.demoAutoCreatePath()) {
-                Files.createDirectories(demoPath);
-                log.info("Created demo monitor directory: {}", demoPath);
-            } else {
-                throw new IOException("Demo monitor path does not exist and auto-create is disabled: " + demoPath);
+        List<Path> pathsToMonitor = new ArrayList<>();
+        if (pathsProperty != null && !pathsProperty.isBlank()) {
+            for (String part : pathsProperty.split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    pathsToMonitor.add(Path.of(trimmed));
+                }
             }
         }
 
-        if (!Files.isDirectory(demoPath)) {
-            throw new IOException("Demo monitor path is not a directory: " + demoPath);
+        if (pathsToMonitor.isEmpty()) {
+            // Fallback: Default to monitoring the user current directory if no paths are explicitly set
+            Path defaultPath = Path.of(System.getProperty("user.dir"));
+            pathsToMonitor.add(defaultPath);
+            log.info("No production monitor paths configured. Defaulting to current working directory: {}", defaultPath);
         }
 
-        monitoringEngine.start(Collections.singletonList(demoPath));
-        log.info("Demo monitoring started on path: {}", demoPath);
+        List<Path> validPaths = new ArrayList<>();
+        for (Path path : pathsToMonitor) {
+            if (Files.exists(path) && Files.isDirectory(path)) {
+                validPaths.add(path);
+            } else {
+                log.warn("Configured production path does not exist or is not a directory: {}", path);
+            }
+        }
+
+        if (validPaths.isEmpty()) {
+            log.warn("No valid production paths found to monitor. Monitoring remains idle.");
+            return;
+        }
+
+        log.info("Activating production monitoring for paths: {}", validPaths);
+        monitoringEngine.start(validPaths);
     }
 
     /**
@@ -209,6 +228,7 @@ public final class RuntimeManager {
                 aMetrics.getTotalIncidentsCreated(),
                 dbWriteFailures.get(),
                 mMetrics.getActiveWatchCount(),
+                eventBus.getMetrics(),
                 currentState
         );
     }
@@ -239,6 +259,7 @@ public final class RuntimeManager {
             long incidentsCreated,
             long dbWriteFailures,
             int activeMonitoredPaths,
+            EventBusMetrics eventBusMetrics,
             RuntimeState currentState
     ) {}
 }

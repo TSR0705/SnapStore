@@ -29,14 +29,26 @@
     
     <!-- Replay Controls -->
     <HBox spacing="10" alignment="CENTER">
-        <Button fx:id="jumpToStartButton" text="|◀" prefWidth="60" 
-                tooltip="Jump to Start"/>
-        <Button fx:id="stepBackwardButton" text="◀" prefWidth="60" 
-                tooltip="Step Backward"/>
-        <Button fx:id="stepForwardButton" text="▶" prefWidth="60" 
-                tooltip="Step Forward"/>
-        <Button fx:id="jumpToEndButton" text="▶|" prefWidth="60" 
-                tooltip="Jump to End"/>
+        <Button fx:id="jumpToStartButton" text="|◀" prefWidth="60">
+            <tooltip>
+                <Tooltip text="Jump to Start"/>
+            </tooltip>
+        </Button>
+        <Button fx:id="stepBackwardButton" text="◀" prefWidth="60">
+            <tooltip>
+                <Tooltip text="Step Backward"/>
+            </tooltip>
+        </Button>
+        <Button fx:id="stepForwardButton" text="▶" prefWidth="60">
+            <tooltip>
+                <Tooltip text="Step Forward"/>
+            </tooltip>
+        </Button>
+        <Button fx:id="jumpToEndButton" text="▶|" prefWidth="60">
+            <tooltip>
+                <Tooltip text="Jump to End"/>
+            </tooltip>
+        </Button>
     </HBox>
     
     <Separator/>

@@ -69,6 +69,16 @@ public final class EvidenceController {
     @FXML private Label statusLabel;
     @FXML private Button traverseButton;
 
+    // SaaS Styled GUI Elements
+    @FXML private Label lblSaaSAlertSeverity;
+    @FXML private Label lblSaaSAlertConfidence;
+    @FXML private Label lblSaaSTriggeredPolicy;
+    @FXML private Label lblSaaSTargetFile;
+    @FXML private Label lblSaaSHostPath;
+    @FXML private Label lblSaaSDetectedTime;
+    @FXML private Label lblSaaSDescription;
+    @FXML private Label lblSaaSPlaybook;
+
     private final ObservableList<EvidenceSummary> evidenceItems = FXCollections.observableArrayList();
     private final Set<String> visitedEvidence = new HashSet<>();
     private int currentTraversalDepth = 0;
@@ -166,22 +176,106 @@ public final class EvidenceController {
         
         if (evidence == null) {
             evidenceDetailArea.clear();
+            if (lblSaaSAlertSeverity != null) lblSaaSAlertSeverity.setText("-");
+            if (lblSaaSAlertConfidence != null) lblSaaSAlertConfidence.setText("-");
+            if (lblSaaSTriggeredPolicy != null) lblSaaSTriggeredPolicy.setText("-");
+            if (lblSaaSTargetFile != null) lblSaaSTargetFile.setText("-");
+            if (lblSaaSHostPath != null) lblSaaSHostPath.setText("-");
+            if (lblSaaSDetectedTime != null) lblSaaSDetectedTime.setText("-");
+            if (lblSaaSDescription != null) lblSaaSDescription.setText("Select an evidence item to display the automated security analysis.");
+            if (lblSaaSPlaybook != null) lblSaaSPlaybook.setText("Follow suggested operations to secure target paths.");
             if (traverseButton != null) {
                 traverseButton.setDisable(true);
             }
             return;
         }
 
-        // Display evidence details
+        // Display evidence details as a beautiful threat briefing report
         StringBuilder details = new StringBuilder();
-        details.append("Evidence ID: ").append(evidence.getEvidenceId()).append("\n");
-        details.append("Rule Name: ").append(evidence.getRuleName()).append("\n");
-        details.append("File Path: ").append(evidence.getFilePath()).append("\n");
-        details.append("Detected At: ").append(formatTimestamp(evidence.getDetectedAt())).append("\n");
-        details.append("Severity: ").append(evidence.getSeverity()).append("\n");
-        details.append("Confidence: ").append(evidence.getConfidence()).append("\n");
+        details.append("====================================================\n");
+        details.append("         🛡️  FILEX SURVEILLANCE THREAT BRIEFING        \n");
+        details.append("====================================================\n\n");
+        
+        details.append("🔴 ALERT SEVERITY  : [").append(evidence.getSeverity()).append("]\n");
+        details.append("🟢 CONFIDENCE RATE : [").append(evidence.getConfidence()).append("]\n\n");
+        
+        String cleanFilename = "unknown_file";
+        try {
+            cleanFilename = java.nio.file.Paths.get(evidence.getFilePath()).getFileName().toString();
+        } catch (Exception ex) {
+            cleanFilename = evidence.getFilePath();
+        }
+        
+        details.append("📄 TARGET FILE NAME: ").append(cleanFilename).append("\n");
+        details.append("📂 FULL HOST PATH  : ").append(evidence.getFilePath()).append("\n");
+        details.append("⏰ DETECTED TIME   : ").append(formatTimestamp(evidence.getDetectedAt())).append("\n");
+        details.append("🛡️ TRIGGERED POLICY: ").append(evidence.getRuleName()).append("\n\n");
+        
+        details.append("----------------------------------------------------\n");
+        details.append("🛡️ THREAT DESCRIPTION & ANALYSIS:\n");
+        
+        String desc = "Decoy file accessed under active surveillance watcher.";
+        String playbook = "Monitor event telemetry.";
+        
+        String ruleName = evidence.getRuleName();
+        if (ruleName.contains("SensitiveDirectory")) {
+            desc = "Suspicious modification or write attempt in a high-value secure system configuration folder. This is a common tactic for establishing persistence (e.g. SSH backdoor injection).";
+            playbook = "1. Review SSH / system authorization access lists immediately.\n2. Revoke any newly injected credentials or unexpected key files.\n3. Validate parent process origin to verify identity.";
+        } else if (ruleName.contains("RapidModification")) {
+            desc = "High-frequency file mutation burst detected across multiple documents in a tight execution window. This is highly indicative of ransomware actively encrypting user files.";
+            playbook = "1. Quarantine the affected host directory or isolate the network segment.\n2. Terminate the encrypting process thread immediately.\n3. Restore data from immutable sandbox or volume shadow snapshots.";
+        } else if (ruleName.contains("MassDeletion")) {
+            desc = "Rapid purge deletion of multiple documents detected in a short time frame. Typically used by destructive malware or ransomware clearing evidence.";
+            playbook = "1. Stop host filesystem I/O operations.\n2. Check host deletion logs to identify the triggering executable.\n3. Perform data restoration drills.";
+        } else if (ruleName.contains("SuspiciousExtension")) {
+            desc = "A high-value user document was renamed to a lock extension (like .locked or .crypto). Classic ransomware encryption signature.";
+            playbook = "1. Identify the encrypting parent process.\n2. Prevent process propagation.\n3. Revert extension rename and restore clean files.";
+        } else if (ruleName.contains("HiddenFile")) {
+            desc = "Stealthy hidden file or dotfile created in monitored user directory. Often used by rootkits or malware hiding config files.";
+            playbook = "1. Inspect the contents of the hidden file.\n2. Delete the payload if unauthorized.\n3. Perform full anti-malware system scan.";
+        }
+        
+        details.append(desc).append("\n\n");
+        details.append("----------------------------------------------------\n");
+        details.append("🚨 RECOMMENDED INCIDENT PLAYBOOK:\n");
+        details.append(playbook).append("\n");
+        details.append("====================================================\n");
         
         evidenceDetailArea.setText(details.toString());
+
+        // Dynamic SaaS layout population
+        if (lblSaaSAlertSeverity != null) {
+            lblSaaSAlertSeverity.setText(evidence.getSeverity());
+            String color = switch (evidence.getSeverity()) {
+                case "CRITICAL", "HIGH" -> "#ef4444";
+                case "MEDIUM" -> "#fbbf24";
+                default -> "#10b981";
+            };
+            lblSaaSAlertSeverity.setStyle("-fx-background-color: " + color + "; -fx-text-fill: black;");
+        }
+        if (lblSaaSAlertConfidence != null) {
+            lblSaaSAlertConfidence.setText(evidence.getConfidence());
+        }
+        
+        String friendlyPolicy = evidence.getRuleName();
+        if (friendlyPolicy.contains("SensitiveDirectory")) {
+            friendlyPolicy = "Host Directory Alteration Attempt";
+        } else if (friendlyPolicy.contains("RapidModification")) {
+            friendlyPolicy = "Ransomware File Encryption Burst";
+        } else if (friendlyPolicy.contains("MassDeletion")) {
+            friendlyPolicy = "High-Velocity File Deletion Threat";
+        } else if (friendlyPolicy.contains("SuspiciousExtension")) {
+            friendlyPolicy = "Suspicious Extension Locking Event";
+        } else if (friendlyPolicy.contains("HiddenFile")) {
+            friendlyPolicy = "Stealthy Hidden Payload Created";
+        }
+        
+        if (lblSaaSTriggeredPolicy != null) lblSaaSTriggeredPolicy.setText(friendlyPolicy);
+        if (lblSaaSTargetFile != null) lblSaaSTargetFile.setText(cleanFilename);
+        if (lblSaaSHostPath != null) lblSaaSHostPath.setText(evidence.getFilePath());
+        if (lblSaaSDetectedTime != null) lblSaaSDetectedTime.setText(formatTimestamp(evidence.getDetectedAt()));
+        if (lblSaaSDescription != null) lblSaaSDescription.setText(desc);
+        if (lblSaaSPlaybook != null) lblSaaSPlaybook.setText(playbook);
         
         if (traverseButton != null) {
             // Enable traversal if correlation ID exists, we haven't visited it, and depth isn't exceeded
@@ -335,11 +429,55 @@ public final class EvidenceController {
             if (empty || evidence == null) {
                 setText(null);
                 setGraphic(null);
+                setStyle("");
             } else {
-                setText(String.format("[%s] %s - %s",
-                        evidence.getRuleName(),
-                        evidence.getFilePath(),
-                        TIMESTAMP_FORMAT.format(evidence.getDetectedAt())));
+                setText(null);
+
+                // Container
+                javafx.scene.layout.HBox cellContainer = new javafx.scene.layout.HBox(10);
+                cellContainer.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                cellContainer.setPadding(new javafx.geometry.Insets(4, 6, 4, 6));
+
+                // 1. Icon indicator based on rule
+                String rule = evidence.getRuleName();
+                String icon = "📁";
+                if (rule.contains("SensitiveDirectory")) icon = "🛡️";
+                else if (rule.contains("RapidModification")) icon = "💥";
+                else if (rule.contains("MassDeletion")) icon = "🗑️";
+                else if (rule.contains("SuspiciousExtension")) icon = "🔄";
+                else if (rule.contains("HiddenFile")) icon = "🕵️";
+
+                Label lblIcon = new Label(icon);
+                lblIcon.setStyle("-fx-font-size: 16px;");
+
+                // 2. Text layout (Filename + short relative directory)
+                javafx.scene.layout.VBox textContainer = new javafx.scene.layout.VBox(2);
+                javafx.scene.layout.HBox.setHgrow(textContainer, javafx.scene.layout.Priority.ALWAYS);
+
+                // Extract filename
+                String fullPath = evidence.getFilePath();
+                String filename = "unknown_file";
+                String parentDir = "";
+                try {
+                    java.nio.file.Path p = java.nio.file.Paths.get(fullPath);
+                    filename = p.getFileName().toString();
+                    parentDir = ".../" + p.getParent().getFileName().toString() + "/";
+                } catch (Exception ex) {
+                    filename = fullPath;
+                }
+
+                Label lblFilename = new Label(filename);
+                lblFilename.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: -color-text;");
+
+                String timeStr = TIMESTAMP_FORMAT.format(evidence.getDetectedAt());
+                Label lblDetails = new Label(String.format("Location: %s | Time: %s", parentDir + filename, timeStr));
+                lblDetails.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #a0aec0;");
+
+                textContainer.getChildren().addAll(lblFilename, lblDetails);
+                cellContainer.getChildren().addAll(lblIcon, textContainer);
+
+                setGraphic(cellContainer);
+                setStyle("-fx-background-color: transparent;");
             }
         }
     }

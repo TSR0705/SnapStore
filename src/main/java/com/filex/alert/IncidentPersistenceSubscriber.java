@@ -4,6 +4,7 @@ import com.filex.detection.DetectionEvent;
 import com.filex.event.EventBus;
 import com.filex.persistence.IncidentPersistenceService;
 import com.filex.persistence.PersistenceException;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,17 @@ public final class IncidentPersistenceSubscriber {
         eventBus.subscribe(com.filex.detection.HiddenFileDetectedEvent.class, this::onDetectionEvent);
         eventBus.subscribe(com.filex.detection.SensitiveDirectoryAccessDetectedEvent.class, this::onDetectionEvent);
 
+        log.info(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceSubscriber event=subscriber_started");
+        // TODO: Subscriber currently has no AppConfig/DatabaseManager reference; add one without
+        // changing constructor signature in a future task to surface the real database file path.
+        log.info(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceSubscriber event=db_path path=unknown");
+        // TODO: Surface schema version from DatabaseManager once injected; persistenceService
+        // does not currently expose a schema version accessor.
+        log.info(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceSubscriber event=schema_version v=unknown");
+
         log.info("Incident persistence subscriber started");
     }
 
@@ -104,7 +116,20 @@ public final class IncidentPersistenceSubscriber {
         // Clear tracking
         recentDetections.clear();
 
+        log.info(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceSubscriber event=subscriber_stopped");
         log.info("Incident persistence subscriber stopped");
+    }
+
+    /**
+     * Clears in-memory tracking state for truth-validation runs.
+     * Intended to be called only by {@code TruthValidationCoordinator} while the
+     * subscriber/engines are still IDLE. No state guard is enforced here.
+     */
+    public void resetForValidation() {
+        recentDetections.clear();
+        log.info(TruthMarkers.TRUTH,
+                "component=IncidentPersistenceSubscriber event=reset_for_validation_complete");
     }
 
     public boolean isStarted() {
@@ -123,13 +148,25 @@ public final class IncidentPersistenceSubscriber {
 
     private void onIncidentCreated(IncidentCreatedEvent event) {
         Incident incident = event.getIncident();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Persistence action=event_received incidentId={} eventType=IncidentCreatedEvent",
+                incident.getIncidentId());
         
         try {
             // Find the detection that triggered this incident
             DetectionEvent detection = findDetectionForIncident(incident);
             
             if (detection != null) {
+                log.debug(TruthMarkers.TRUTH,
+                        "component=IncidentPersistenceSubscriber event=persist_attempt incidentId={} kind=created",
+                        incident.getIncidentId());
                 persistenceService.persistNewIncident(incident, detection);
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Persistence action=persist_incident incidentId={} type=create result=success",
+                        incident.getIncidentId());
+                log.debug(TruthMarkers.TRUTH,
+                        "component=IncidentPersistenceSubscriber event=persist_result incidentId={} kind=created outcome=ok",
+                        incident.getIncidentId());
                 log.debug("Persisted new incident: {}", incident.getIncidentId());
             } else {
                 log.warn("Cannot persist incident {}: no detection found", incident.getIncidentId());
@@ -137,6 +174,12 @@ public final class IncidentPersistenceSubscriber {
             
         } catch (PersistenceException e) {
             // Log but don't crash - persistence failures are isolated
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Persistence action=persist_incident incidentId={} type=create result=failure err={}",
+                    incident.getIncidentId(), e.getMessage());
+            log.error(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceSubscriber event=persist_result incidentId={} kind=created outcome=fail err={}",
+                    incident.getIncidentId(), e.getMessage(), e);
             log.error("Failed to persist incident creation: {}", incident.getIncidentId(), e);
         }
     }
@@ -144,16 +187,34 @@ public final class IncidentPersistenceSubscriber {
     private void onIncidentUpdated(IncidentUpdatedEvent event) {
         Incident incident = event.getIncident();
         String updateReason = event.getUpdateReason();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Persistence action=event_received incidentId={} eventType=IncidentUpdatedEvent reason={}",
+                incident.getIncidentId(), updateReason != null ? updateReason : "none");
         
         try {
             // Try to find the detection that triggered this update
             DetectionEvent detection = findDetectionForIncident(incident);
             
+            log.debug(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceSubscriber event=persist_attempt incidentId={} kind=updated",
+                    incident.getIncidentId());
             persistenceService.persistIncidentUpdate(incident, detection, updateReason);
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Persistence action=persist_incident incidentId={} type=update result=success",
+                    incident.getIncidentId());
+            log.debug(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceSubscriber event=persist_result incidentId={} kind=updated outcome=ok",
+                    incident.getIncidentId());
             log.debug("Persisted incident update: {}", incident.getIncidentId());
             
         } catch (PersistenceException e) {
             // Log but don't crash - persistence failures are isolated
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Persistence action=persist_incident incidentId={} type=update result=failure err={}",
+                    incident.getIncidentId(), e.getMessage());
+            log.error(TruthMarkers.TRUTH,
+                    "component=IncidentPersistenceSubscriber event=persist_result incidentId={} kind=updated outcome=fail err={}",
+                    incident.getIncidentId(), e.getMessage(), e);
             log.error("Failed to persist incident update: {}", incident.getIncidentId(), e);
         }
     }

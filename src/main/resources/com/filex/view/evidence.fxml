@@ -4,42 +4,102 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="evidenceRoot" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<VBox fx:id="evidenceRoot" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.filex.controller.EvidenceController"
-      spacing="15" style="-fx-padding: 20;">
+      spacing="20" style="-fx-padding: 24; -fx-background-color: #080b11;"
+      styleClass="view-container">
     
-    <!-- Header -->
-    <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="Evidence Exploration" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-        <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="traversalDepthLabel" text="Depth: 0/5" style="-fx-font-size: 12px;"/>
-        <Button fx:id="backButton" text="Back"/>
+    <!-- Top Header -->
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Security Evidence Exploration" style="-fx-font-size: 22px; -fx-font-weight: 800; -fx-text-fill: white;"/>
+            <Label fx:id="incidentIdLabel" text="Incident ID: -" style="-fx-font-size: 12px; -fx-text-fill: #94a3b8;"/>
+        </VBox>
+        <Label fx:id="traversalDepthLabel" text="Depth: 0/5"
+               style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -color-accent; -fx-background-color: #161c2a; -fx-padding: 4 8 4 8; -fx-background-radius: 4; -fx-border-color: #1e293b; -fx-border-radius: 4;"/>
+        <Button fx:id="backButton" text="← Return Workspace" styleClass="button" style="-fx-padding: 6 12 6 12;"/>
         <ProgressIndicator fx:id="loadingIndicator" visible="false" prefWidth="20" prefHeight="20"/>
     </HBox>
     
-    <Label fx:id="incidentIdLabel" text="Incident: -" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
-    
     <Separator/>
     
-    <!-- Error display -->
-    <Label fx:id="errorLabel" visible="false" style="-fx-text-fill: #d32f2f;" wrapText="true"/>
+    <!-- Error Alert Display -->
+    <Label fx:id="errorLabel" visible="false" style="-fx-text-fill: #ef4444; -fx-background-color: rgba(239, 68, 68, 0.1); -fx-padding: 8; -fx-background-radius: 4; -fx-border-color: #ef4444; -fx-border-radius: 4;" wrapText="true"/>
     
-    <!-- Evidence List and Detail Split -->
-    <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
+    <!-- Evidence List and Detail Split (Premium Glassmorphism Style) -->
+    <SplitPane dividerPositions="0.45" VBox.vgrow="ALWAYS" styleClass="split-pane" style="-fx-background-color: transparent;">
         
-        <!-- Left: Evidence List -->
-        <VBox spacing="10" style="-fx-padding: 10;">
-            <Label text="Evidence Items" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-            <ListView fx:id="evidenceListView" VBox.vgrow="ALWAYS"/>
-            <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 12px; -fx-text-fill: #666;"/>
+        <!-- Left Column: Evidence Items list -->
+        <VBox spacing="12" style="-fx-padding: 0 16 0 0; -fx-background-color: transparent;">
+            <Label text="TELEMETRY EVIDENCE COLLECTED" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #94a3b8; -fx-letter-spacing: 0.5px;"/>
+            <ListView fx:id="evidenceListView" VBox.vgrow="ALWAYS" styleClass="list-view"/>
+            <HBox alignment="CENTER_LEFT" spacing="6">
+                <Label text="System status:" style="-fx-font-size: 11px; -fx-text-fill: #64748b;"/>
+                <Label fx:id="statusLabel" text="Ready" style="-fx-font-size: 11px; -fx-text-fill: -color-success; -fx-font-weight: bold;"/>
+            </HBox>
         </VBox>
         
-        <!-- Right: Evidence Detail -->
-        <VBox spacing="10" style="-fx-padding: 10;">
-            <Label text="Evidence Details" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-            <TextArea fx:id="evidenceDetailArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
-                      style="-fx-font-family: monospace;"/>
-            <Button fx:id="traverseButton" text="Traverse Related Evidence" disable="true" maxWidth="Infinity"/>
+        <!-- Right Column: Premium SaaS Detail Briefing -->
+        <VBox spacing="16" style="-fx-padding: 16; -fx-background-color: #0e131f; -fx-background-radius: 8; -fx-border-color: #1e293b; -fx-border-width: 1;">
+            <Label text="SECURITY EVIDENCE THREAT BRIEFING" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -color-accent; -fx-letter-spacing: 0.5px;"/>
+            
+            <!-- Hidden text area for backward compatibility -->
+            <TextArea fx:id="evidenceDetailArea" visible="false" managed="false" prefHeight="0" prefWidth="0"/>
+
+            <!-- SaaS Details ScrollPane -->
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="scroll-pane" style="-fx-background-color: transparent;">
+                <content>
+                    <VBox spacing="20" style="-fx-background-color: transparent;">
+                        <!-- Hero Section Card -->
+                        <VBox spacing="10" style="-fx-padding: 16; -fx-background-color: #161c2a; -fx-background-radius: 6; -fx-border-color: #1e293b; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <Label text="SEVERITY:" style="-fx-font-weight: bold; -fx-font-size: 10px; -fx-text-fill: #94a3b8;"/>
+                                <Label fx:id="lblSaaSAlertSeverity" text="-" style="-fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 2 6 2 6; -fx-background-radius: 4; -fx-text-fill: white;"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label text="CONFIDENCE:" style="-fx-font-weight: bold; -fx-font-size: 10px; -fx-text-fill: #94a3b8;"/>
+                                <Label fx:id="lblSaaSAlertConfidence" text="-" style="-fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 2 6 2 6; -fx-background-radius: 4; -fx-background-color: #1e293b; -fx-text-fill: #a0aec0; -fx-border-color: #1e293b; -fx-border-width: 1; -fx-border-radius: 4;"/>
+                            </HBox>
+                            <Separator style="-fx-padding: 4 0 4 0;"/>
+                            <Label text="TRIGGERED SURVEILLANCE POLICY" style="-fx-font-size: 9px; -fx-font-weight: bold; -fx-text-fill: #94a3b8; -fx-text-transform: uppercase;"/>
+                            <Label fx:id="lblSaaSTriggeredPolicy" text="-" style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+                        </VBox>
+
+                        <!-- Telemetry Metadata Details Grid -->
+                        <VBox spacing="12">
+                            <Label text="TELEMETRY METADATA" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #94a3b8; -fx-letter-spacing: 0.5px;"/>
+                            <GridPane hgap="12" vgap="8" style="-fx-padding: 8 0 8 0;">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="25.0"/>
+                                    <ColumnConstraints percentWidth="75.0"/>
+                                </columnConstraints>
+                                
+                                <Label text="Target File:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: #94a3b8; -fx-font-size: 12px;"/>
+                                <Label fx:id="lblSaaSTargetFile" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: white;" wrapText="true"/>
+
+                                <Label text="Host Path:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: #94a3b8; -fx-font-size: 12px;"/>
+                                <Label fx:id="lblSaaSHostPath" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-family: Consolas; -fx-font-size: 11.5px; -fx-text-fill: #a0aec0;" wrapText="true"/>
+
+                                <Label text="Detected At:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: #94a3b8; -fx-font-size: 12px;"/>
+                                <Label fx:id="lblSaaSDetectedTime" text="-" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-size: 12px; -fx-text-fill: white;"/>
+                            </GridPane>
+                        </VBox>
+
+                        <!-- Threat Analysis Description Card -->
+                        <VBox spacing="10" style="-fx-padding: 14; -fx-background-color: #080b11; -fx-background-radius: 6; -fx-border-color: #1e293b; -fx-border-width: 1;">
+                            <Label text="🛡️ THREAT DESCRIPTION &amp; ANALYSIS" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: -color-accent;"/>
+                            <Label fx:id="lblSaaSDescription" text="Select an evidence item to display the automated security analysis." style="-fx-font-size: 12px; -fx-text-fill: #cbd5e1;" wrapText="true"/>
+                        </VBox>
+
+                        <!-- Incident Playbook Actions -->
+                        <VBox spacing="10" style="-fx-padding: 14; -fx-background-color: #080b11; -fx-background-radius: 6; -fx-border-color: #ef4444; -fx-border-width: 1; -fx-border-style: dashed;">
+                            <Label text="🚨 RECOMMENDED REMEDIATION PLAYBOOK" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
+                            <Label fx:id="lblSaaSPlaybook" text="Follow suggested operations to secure target paths." style="-fx-font-size: 12px; -fx-text-fill: #cbd5e1; -fx-line-spacing: 4;" wrapText="true"/>
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
+
+            <Button fx:id="traverseButton" text="Traverse Related Evidence Flow" disable="true" maxWidth="Infinity" styleClass="button-primary" style="-fx-padding: 8;"/>
         </VBox>
         
     </SplitPane>

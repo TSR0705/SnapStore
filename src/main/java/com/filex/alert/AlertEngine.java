@@ -2,6 +2,7 @@ package com.filex.alert;
 
 import com.filex.detection.*;
 import com.filex.event.EventBus;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,6 +138,10 @@ public final class AlertEngine {
             );
 
             log.info("Alert engine started successfully");
+            int totalCapacity = processingQueue.remainingCapacity() + processingQueue.size();
+            log.info(TruthMarkers.TRUTH,
+                    "component=AlertEngine event=engine_started workers={} queueCapacity={}",
+                    PROCESSING_THREADS, totalCapacity);
 
         } catch (Exception e) {
             state = AlertState.FAILED;
@@ -239,22 +244,41 @@ public final class AlertEngine {
             return;
         }
 
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Alert action=event_received detectionId={} rule={} severity={}",
+                san(detection.eventId()), san(detection.ruleName()), san(detection.severity()));
+
         // Queue for processing (non-blocking)
         boolean queued = processingQueue.offer(detection);
         if (!queued) {
             totalDroppedAlerts.incrementAndGet();
             log.warn("Processing queue full, dropping detection: {}", detection.ruleName());
+            log.warn(TruthMarkers.TRUTH,
+                    "component=AlertEngine event=alert_queue_full detectionId={}",
+                    san(detection.eventId()));
         }
     }
 
     private void processingLoop() {
         log.debug("Alert processing thread started: {}", Thread.currentThread().getName());
+        log.info(TruthMarkers.TRUTH,
+                "component=AlertEngine event=worker_started thread={}",
+                san(Thread.currentThread().getName()));
 
         while (state == AlertState.RUNNING) {
             try {
                 DetectionEvent detection = processingQueue.poll(100, TimeUnit.MILLISECONDS);
                 if (detection != null) {
-                    processDetection(detection);
+                    // Propagate MDC validation run identifier across worker thread boundaries
+                    String correlationId = detection.correlationId();
+                    try {
+                        if (correlationId != null) {
+                            org.slf4j.MDC.put(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID, correlationId);
+                        }
+                        processDetection(detection);
+                    } finally {
+                        org.slf4j.MDC.remove(com.filex.validation.TruthValidationCoordinator.MDC_VALIDATION_RUN_ID);
+                    }
                 }
             } catch (InterruptedException e) {
                 log.debug("Processing thread interrupted");
@@ -271,11 +295,23 @@ public final class AlertEngine {
     private void processDetection(DetectionEvent detection) {
         totalAlertsProcessed.incrementAndGet();
 
+        log.debug(TruthMarkers.TRUTH,
+                "component=AlertEngine event=detection_received detectionId={} rule={} severity={}",
+                san(detection.eventId()), san(detection.ruleName()), san(detection.severity()));
+
         try {
+            long correlationLatencyMs = java.time.Duration.between(detection.occurredAt(), java.time.Instant.now()).toMillis();
+            
             // Check suppression first
             if (suppressionEngine.shouldSuppress(detection)) {
                 totalAlertsSuppressed.incrementAndGet();
                 log.debug("Alert suppressed: {}", detection.ruleName());
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Alert action=detection_evaluated detectionId={} result=suppressed reason=duplicate correlationLatencyMs={}",
+                        san(detection.eventId()), correlationLatencyMs);
+                log.debug(TruthMarkers.TRUTH,
+                        "component=AlertEngine event=detection_suppressed detectionId={} reason=duplicate",
+                        san(detection.eventId()));
                 return;
             }
 
@@ -283,17 +319,35 @@ public final class AlertEngine {
             String correlatedIncidentId = correlationEngine.findCorrelatedIncident(detection);
 
             if (correlatedIncidentId != null) {
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=merge incidentId={} correlationLatencyMs={}",
+                        san(detection.eventId()), san(correlatedIncidentId), correlationLatencyMs);
+                log.debug(TruthMarkers.TRUTH,
+                        "component=AlertEngine event=correlation_decision detectionId={} outcome=match incidentId={}",
+                        san(detection.eventId()), san(correlatedIncidentId));
                 // Merge with existing incident
                 mergeDetectionIntoIncident(correlatedIncidentId, detection);
             } else {
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=Alert action=correlation_decision detectionId={} result=create correlationLatencyMs={}",
+                        san(detection.eventId()), correlationLatencyMs);
+                log.debug(TruthMarkers.TRUTH,
+                        "component=AlertEngine event=correlation_decision detectionId={} outcome=new",
+                        san(detection.eventId()));
                 // Create new incident
                 createIncidentFromDetection(detection);
             }
 
         } catch (Exception e) {
             totalCorrelationFailures.incrementAndGet();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=Alert action=detection_evaluated detectionId={} result=failure err={}",
+                    san(detection.eventId()), san(e.getMessage()));
             log.error("Failed to process detection: {} - {}", 
                     detection.ruleName(), e.getMessage(), e);
+            log.error(TruthMarkers.TRUTH,
+                    "component=AlertEngine event=alert_processing_failure detectionId={} err={}",
+                    san(detection.eventId()), san(e.getMessage()), e);
             // Continue processing other detections (failure isolation)
         }
     }
@@ -327,6 +381,15 @@ public final class AlertEngine {
         totalIncidentsCreated.incrementAndGet();
 
         log.info("Created incident: {} - {}", incidentId, incident.getTitle());
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Alert action=incident_created incidentId={} rule={} severity={} correlationId={} detectionId={} result=success",
+                san(incident.getIncidentId()), san(detection.ruleName()), san(incidentSeverity),
+                san(incident.getCorrelationId()), san(detection.eventId()));
+        log.info(TruthMarkers.TRUTH,
+                "component=AlertEngine event=incident_created incidentId={} rule={} severity={} correlationId={} detectionId={}",
+                san(incident.getIncidentId()), san(detection.ruleName()),
+                san(incidentSeverity), san(incident.getCorrelationId()),
+                san(detection.eventId()));
 
         // Publish incident created event
         eventBus.tryPublishAsync(new IncidentCreatedEvent(incident));
@@ -341,6 +404,9 @@ public final class AlertEngine {
         }
 
         Instant now = Instant.now();
+
+        // Capture pre-modification severity for instrumentation
+        IncidentSeverity oldSeverity = existingIncident.getSeverity();
 
         // Build updated incident
         Incident.Builder builder = existingIncident.toBuilder()
@@ -377,10 +443,22 @@ public final class AlertEngine {
         log.info("Merged detection into incident: {} (now {} detections)", 
                 incidentId, updatedIncident.getDetectionCount());
 
+        String updateReason = "Detection merged: " + detection.ruleName();
+        boolean escalated = newSeverity != oldSeverity;
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=Alert action=incident_merged incidentId={} oldSeverity={} newSeverity={} escalated={} detectionCount={} detectionId={} result=success",
+                san(updatedIncident.getIncidentId()), san(oldSeverity), san(newSeverity), escalated,
+                updatedIncident.getDetectionCount(), san(detection.eventId()));
+        log.info(TruthMarkers.TRUTH,
+                "component=AlertEngine event=incident_updated incidentId={} reason={} oldSeverity={} newSeverity={} escalated={} detectionCount={} detectionId={}",
+                san(updatedIncident.getIncidentId()), san(updateReason),
+                san(oldSeverity), san(newSeverity), escalated,
+                updatedIncident.getDetectionCount(), san(detection.eventId()));
+
         // Publish incident updated event
         eventBus.tryPublishAsync(new IncidentUpdatedEvent(
                 updatedIncident, 
-                "Detection merged: " + detection.ruleName()
+                updateReason
         ));
     }
 
@@ -426,5 +504,45 @@ public final class AlertEngine {
             evidence.put("primaryPath", detection.affectedPaths().get(0).toString());
         }
         return evidence;
+    }
+
+    /**
+     * Sanitizes a value for inline structured-log emission by stripping
+     * newlines/tabs/carriage returns that would corrupt key=value framing.
+     */
+    private static String san(Object v) {
+        if (v == null) {
+            return "null";
+        }
+        String s = v.toString();
+        return s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ');
+    }
+
+    /**
+     * Validation-mode reset. Clears in-memory engine state so that a fresh
+     * truth-validation run starts from a clean slate. Must only be invoked
+     * before the engine is started, or after it has been stopped.
+     *
+     * @throws IllegalStateException if the engine is not in IDLE or STOPPED.
+     */
+    public synchronized void resetForValidation() {
+        if (state != AlertState.IDLE && state != AlertState.STOPPED) {
+            throw new IllegalStateException(
+                    "AlertEngine.resetForValidation() requires IDLE/STOPPED, current=" + state);
+        }
+        activeIncidents.clear();
+        correlationEngine.clear();
+        suppressionEngine.clear();
+        if (processingQueue != null) {
+            processingQueue.clear();
+        }
+        totalAlertsProcessed.set(0);
+        totalIncidentsCreated.set(0);
+        totalIncidentsMerged.set(0);
+        totalAlertsSuppressed.set(0);
+        totalCorrelationFailures.set(0);
+        totalDroppedAlerts.set(0);
+        log.info(TruthMarkers.TRUTH,
+                "component=AlertEngine event=reset_for_validation_complete");
     }
 }

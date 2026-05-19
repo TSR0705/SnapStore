@@ -7,6 +7,7 @@ import com.filex.repository.IncidentRepository;
 import com.filex.repository.IncidentEvidenceRepository;
 import com.filex.repository.ForensicTimelineRepository;
 import com.filex.repository.PageRequest;
+import com.filex.validation.TruthMarkers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +84,13 @@ public final class InvestigationQueryService {
         Objects.requireNonNull(criteria, "criteria must not be null");
         validatePagination(pageNumber, pageSize);
 
-        long startTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=QueryService action=query_invoked method=findIncidents page={} size={}",
+                pageNumber, pageSize);
+        log.debug(TruthMarkers.TRUTH,
+                "component=InvestigationQueryService event=query_invoked method=findIncidents criteria={} page={} size={}",
+                String.valueOf(criteria), pageNumber, pageSize);
         try {
             metrics.recordIncidentQuery();
 
@@ -96,7 +103,7 @@ public final class InvestigationQueryService {
             }
 
             long totalCount = countIncidents(criteria);
-            long duration = System.currentTimeMillis() - startTime;
+            long duration = System.currentTimeMillis() - startMs;
             metrics.recordQuery(duration);
 
             if (summaries.size() > OVERSIZED_RESULT_THRESHOLD) {
@@ -105,6 +112,12 @@ public final class InvestigationQueryService {
                         summaries.size(), OVERSIZED_RESULT_THRESHOLD);
             }
 
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findIncidents count={} result=success",
+                    summaries.size());
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=query_result method=findIncidents count={} durationMs={}",
+                    summaries.size(), duration);
             return InvestigationResult.<IncidentSummary>builder()
                     .items(summaries)
                     .totalCount(totalCount)
@@ -117,6 +130,9 @@ public final class InvestigationQueryService {
 
         } catch (SQLException e) {
             metrics.recordFailedQuery();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findIncidents result=failure err={}",
+                    e.getMessage());
             log.error("Failed to query incidents: {}", e.getMessage(), e);
             throw new InvestigationException("Failed to query incidents", e);
         }
@@ -132,25 +148,47 @@ public final class InvestigationQueryService {
     public Optional<IncidentSummary> findIncidentById(String incidentId) throws InvestigationException {
         Objects.requireNonNull(incidentId, "incidentId must not be null");
 
-        long startTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=QueryService action=query_invoked method=findIncidentById incidentId={}",
+                incidentId);
+        log.debug(TruthMarkers.TRUTH,
+                "component=InvestigationQueryService event=query_invoked method=findIncidentById criteria=null incidentId={}",
+                incidentId);
         try {
             metrics.recordIncidentQuery();
 
             Optional<IncidentEntity> incident = incidentRepository.findByIncidentId(incidentId);
             if (incident.isEmpty()) {
+                long missDuration = System.currentTimeMillis() - startMs;
+                log.info(TruthMarkers.TRUTH,
+                        "TRUTH stage=QueryService action=query_executed method=findIncidentById incidentId={} result=success status=not_found",
+                        incidentId);
+                log.debug(TruthMarkers.TRUTH,
+                        "component=InvestigationQueryService event=query_result method=findIncidentById count=0 durationMs={}",
+                        missDuration);
                 return Optional.empty();
             }
 
             long evidenceCount = evidenceRepository.countByIncidentId(incidentId);
             IncidentSummary summary = toIncidentSummary(incident.get(), evidenceCount);
 
-            long duration = System.currentTimeMillis() - startTime;
+            long duration = System.currentTimeMillis() - startMs;
             metrics.recordQuery(duration);
 
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findIncidentById incidentId={} result=success status=found",
+                    incidentId);
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=query_result method=findIncidentById count=1 durationMs={}",
+                    duration);
             return Optional.of(summary);
 
         } catch (SQLException e) {
             metrics.recordFailedQuery();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findIncidentById incidentId={} result=failure err={}",
+                    incidentId, e.getMessage());
             log.error("Failed to find incident by ID: {}", incidentId, e);
             throw new InvestigationException("Failed to find incident: " + incidentId, e);
         }
@@ -172,7 +210,13 @@ public final class InvestigationQueryService {
 
         Objects.requireNonNull(incidentId, "incidentId must not be null");
 
-        long startTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=QueryService action=query_invoked method=findEvidenceForIncident incidentId={}",
+                incidentId);
+        log.debug(TruthMarkers.TRUTH,
+                "component=InvestigationQueryService event=query_invoked method=findEvidenceForIncident criteria=null incidentId={}",
+                incidentId);
         try {
             metrics.recordEvidenceQuery();
 
@@ -181,9 +225,18 @@ public final class InvestigationQueryService {
                     .map(this::toEvidenceSummary)
                     .toList();
 
-            long duration = System.currentTimeMillis() - startTime;
+            long duration = System.currentTimeMillis() - startMs;
             metrics.recordQuery(duration);
 
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findEvidenceForIncident incidentId={} count={} result=success",
+                    incidentId, summaries.size());
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=query_result method=findEvidenceForIncident count={} durationMs={}",
+                    summaries.size(), duration);
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=detail_fetch incidentId={} kind=evidence count={} durationMs={}",
+                    incidentId, summaries.size(), duration);
             return InvestigationResult.<EvidenceSummary>builder()
                     .items(summaries)
                     .totalCount(summaries.size())
@@ -196,6 +249,9 @@ public final class InvestigationQueryService {
 
         } catch (SQLException e) {
             metrics.recordFailedQuery();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findEvidenceForIncident incidentId={} result=failure err={}",
+                    incidentId, e.getMessage());
             log.error("Failed to find evidence for incident: {}", incidentId, e);
             throw new InvestigationException("Failed to find evidence for incident: " + incidentId, e);
         }
@@ -269,7 +325,13 @@ public final class InvestigationQueryService {
 
         Objects.requireNonNull(incidentId, "incidentId must not be null");
 
-        long startTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=QueryService action=query_invoked method=findTimelineForIncident incidentId={}",
+                incidentId);
+        log.debug(TruthMarkers.TRUTH,
+                "component=InvestigationQueryService event=query_invoked method=findTimelineForIncident criteria=null incidentId={}",
+                incidentId);
         try {
             metrics.recordTimelineQuery();
 
@@ -278,9 +340,18 @@ public final class InvestigationQueryService {
                     .map(this::toTimelineEventSummary)
                     .toList();
 
-            long duration = System.currentTimeMillis() - startTime;
+            long duration = System.currentTimeMillis() - startMs;
             metrics.recordQuery(duration);
 
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findTimelineForIncident incidentId={} count={} result=success",
+                    incidentId, summaries.size());
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=query_result method=findTimelineForIncident count={} durationMs={}",
+                    summaries.size(), duration);
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=detail_fetch incidentId={} kind=timeline count={} durationMs={}",
+                    incidentId, summaries.size(), duration);
             return InvestigationResult.<TimelineEventSummary>builder()
                     .items(summaries)
                     .totalCount(summaries.size())
@@ -293,6 +364,9 @@ public final class InvestigationQueryService {
 
         } catch (SQLException e) {
             metrics.recordFailedQuery();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findTimelineForIncident incidentId={} result=failure err={}",
+                    incidentId, e.getMessage());
             log.error("Failed to find timeline for incident: {}", incidentId, e);
             throw new InvestigationException("Failed to find timeline for incident: " + incidentId, e);
         }
@@ -366,7 +440,13 @@ public final class InvestigationQueryService {
 
         Objects.requireNonNull(correlationId, "correlationId must not be null");
 
-        long startTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        log.info(TruthMarkers.TRUTH,
+                "TRUTH stage=QueryService action=query_invoked method=findRelatedIncidents correlationId={}",
+                correlationId);
+        log.debug(TruthMarkers.TRUTH,
+                "component=InvestigationQueryService event=query_invoked method=findRelatedIncidents criteria=null correlationId={}",
+                correlationId);
         try {
             metrics.recordCorrelationTraversal();
 
@@ -378,9 +458,15 @@ public final class InvestigationQueryService {
                 summaries.add(toIncidentSummary(incident, evidenceCount));
             }
 
-            long duration = System.currentTimeMillis() - startTime;
+            long duration = System.currentTimeMillis() - startMs;
             metrics.recordQuery(duration);
 
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findRelatedIncidents correlationId={} count={} result=success",
+                    correlationId, summaries.size());
+            log.debug(TruthMarkers.TRUTH,
+                    "component=InvestigationQueryService event=query_result method=findRelatedIncidents count={} durationMs={}",
+                    summaries.size(), duration);
             return InvestigationResult.<IncidentSummary>builder()
                     .items(summaries)
                     .totalCount(summaries.size())
@@ -393,6 +479,9 @@ public final class InvestigationQueryService {
 
         } catch (SQLException e) {
             metrics.recordFailedQuery();
+            log.info(TruthMarkers.TRUTH,
+                    "TRUTH stage=QueryService action=query_executed method=findRelatedIncidents correlationId={} result=failure err={}",
+                    correlationId, e.getMessage());
             log.error("Failed to find related incidents: {}", correlationId, e);
             throw new InvestigationException("Failed to find related incidents: " + correlationId, e);
         }
