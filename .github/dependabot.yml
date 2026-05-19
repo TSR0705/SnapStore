@@ -1,16 +1,45 @@
-# Dependabot configuration for FileX
+# Dependabot Configuration for FileX
+# Standard: FAANG/Enterprise Open-Source Repositories
 
 version: 2
 updates:
-  # Gradle dependencies
+  # Gradle Dependencies Management
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+      day: "monday"
+    open-pull-requests-limit: 10
+    target-branch: "main"
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
-  # GitHub Actions updates
+    # Group updates together to prevent Pull Request spam
+    groups:
+      javafx-dependencies:
+        patterns:
+          - "org.openjfx:*"
+      testing-frameworks:
+        patterns:
+          - "org.junit.*"
+          - "org.mockito:*"
+          - "org.testfx:*"
+          - "org.hamcrest:*"
+
+  # GitHub Actions Workflows Management
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    target-branch: "main"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
