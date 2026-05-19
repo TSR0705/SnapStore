@@ -1,30 +1,31 @@
 /* ============================================================================
-   FileX Main Stylesheet
-   Slate-Obsidian Dark Cyberpunk Theme (200% Visual Improvement)
+   FileX Premium SaaS Obsidian Stylesheet
+   Design Ethos: Sleek Enterprise SaaS / Glassmorphic Cyber Triage Theme
    ============================================================================ */
 
 /* Root System Tokens & Color Variables */
 .root {
-    -fx-font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
     -fx-font-size: 13.5px;
 
-    /* Color Palette */
-    -color-background: #080b11;    /* Deep space obsidian */
-    -color-surface: #0e131f;       /* Slate workspace container background */
-    -color-primary: #0a0d16;       /* Sidebar background */
-    -color-secondary: #161c2a;     /* Panel background & Hover state */
-    -color-accent: #00d2ff;        /* Cyber electric blue glow */
+    /* Theme Palette */
+    -color-background: #060913;      /* Deep Obsidian Void */
+    -color-surface: #0c1020;         /* High-contrast container base */
+    -color-primary: #04060d;         /* Sidebar base */
+    -color-secondary: #131a30;       /* Secondary container / borders */
     
-    /* Severity Colors */
-    -color-low: #38bdf8;           /* Cyan low severity */
-    -color-medium: #fbbf24;        /* Electric yellow medium */
-    -color-high: #f97316;          /* Neon cyber orange high */
-    -color-danger: #ef4444;        /* Cyberpunk neon red critical */
+    /* Premium Glowing Accents */
+    -color-accent: #00d2ff;          /* Cyber Cyan Glow */
+    -color-accent-hover: #8be4ff;    /* Vibrant Azure Glow */
+    -color-success: #10b981;         /* Emerald Success Green */
+    -color-danger: #f43f5e;          /* Rose Critical Red */
+    -color-warning: #fbbf24;         /* Amber Alert Yellow */
+    -color-info: #3b82f6;            /* Royal Blue Info */
     
-    -color-success: #10b981;       /* Electric emerald green */
-    -color-border: #1e293b;        /* Thin charcoal slate border */
-    -color-text: #f8fafc;          /* Off-white readable text */
-    -color-text-muted: #94a3b8;    /* Muted silver slate text */
+    -color-border: #1a2238;          /* Thin dark slate border */
+    -color-border-hover: #2a3759;    /* Highlight slate border */
+    -color-text: #f8fafc;            /* Crisp off-white text */
+    -color-text-muted: #64748b;      /* Elegant slate muted text */
 }
 
 /* ============================================================================
@@ -32,8 +33,8 @@
    ============================================================================ */
 
 .sidebar {
-    -fx-background-color: -color-primary;
-    -fx-padding: 24 12 24 12;
+    -fx-background-color: linear-gradient(to bottom, -color-primary, #090e1f);
+    -fx-padding: 28 16 28 16;
     -fx-border-color: transparent -color-border transparent transparent;
     -fx-border-width: 0 1 0 0;
 }
@@ -64,38 +65,38 @@
 }
 
 /* ============================================================================
-   Typography & Headers
+   Typography & SaaS Headers
    ============================================================================ */
 
-/* Global Label Override for Dark Themes */
 .label {
     -fx-text-fill: -color-text;
 }
 
 .app-title {
-    -fx-font-size: 26px;
+    -fx-font-size: 28px;
     -fx-font-weight: 900;
-    -fx-text-fill: -color-text;
+    -fx-text-fill: linear-gradient(to right, #00d2ff, #10b981); /* Cyan-to-emerald gradient */
     -fx-padding: 8 0 0 0;
-    -fx-letter-spacing: 1px;
+    -fx-letter-spacing: 1.5px;
 }
 
 .app-subtitle {
     -fx-font-size: 11px;
-    -fx-font-weight: bold;
+    -fx-font-weight: 800;
     -fx-text-fill: -color-accent;
-    -fx-padding: 0 0 12 0;
+    -fx-padding: 0 0 14 0;
     -fx-text-transform: uppercase;
+    -fx-letter-spacing: 1px;
 }
 
 .view-title {
-    -fx-font-size: 26px;
+    -fx-font-size: 28px;
     -fx-font-weight: 800;
-    -fx-text-fill: -color-text;
+    -fx-text-fill: linear-gradient(to right, #ffffff, #94a3b8); /* Sleek high-contrast white-to-slate */
 }
 
 .view-subtitle {
-    -fx-font-size: 14px;
+    -fx-font-size: 13.5px;
     -fx-text-fill: -color-text-muted;
 }
 
@@ -117,7 +118,7 @@
 }
 
 /* ============================================================================
-   Buttons & Cyber-Action Controls
+   Buttons & Micro-Interactions
    ============================================================================ */
 
 .button {
@@ -130,59 +131,67 @@
     -fx-background-radius: 6;
     -fx-padding: 10 20 10 20;
     -fx-cursor: hand;
+    -fx-transition: all 0.2s ease-in-out;
 }
 
 .button:hover {
-    -fx-background-color: #21293b;
+    -fx-background-color: #17223b;
     -fx-border-color: -color-accent;
     -fx-text-fill: -color-accent;
 }
 
 .button:pressed {
     -fx-background-color: -color-accent;
-    -fx-text-fill: #000;
+    -fx-text-fill: #04060d;
 }
 
 /* Primary/Accent Action Button */
 .button-primary {
     -fx-background-color: -color-accent;
-    -fx-text-fill: #000;
+    -fx-text-fill: #04060d;
     -fx-border-color: -color-accent;
 }
 
 .button-primary:hover {
-    -fx-background-color: #8be4ff;
-    -fx-text-fill: #000;
+    -fx-background-color: -color-accent-hover;
+    -fx-border-color: -color-accent-hover;
+    -fx-text-fill: #04060d;
 }
 
-/* Sidebar Navigation Items */
+/* Sidebar Navigation Items with Left Glow Strip */
 .nav-button {
     -fx-background-color: transparent;
     -fx-text-fill: -color-text-muted;
-    -fx-font-size: 13px;
+    -fx-font-size: 13.5px;
     -fx-font-weight: bold;
     -fx-padding: 12 16 12 16;
     -fx-cursor: hand;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
     -fx-alignment: CENTER_LEFT;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 0 0;
 }
 
 .nav-button:hover {
     -fx-background-color: -color-secondary;
     -fx-text-fill: -color-text;
+    -fx-border-color: transparent transparent transparent -color-accent;
+    -fx-border-width: 0 0 0 3;
 }
 
-.nav-button:pressed {
+.nav-button:pressed, .nav-button:selected {
     -fx-background-color: -color-secondary;
     -fx-text-fill: -color-accent;
+    -fx-border-color: transparent transparent transparent -color-accent;
+    -fx-border-width: 0 0 0 3;
 }
 
 /* Nav Button Danger / Exit */
 .nav-button-danger {
     -fx-background-color: transparent;
     -fx-text-fill: -color-danger;
-    -fx-font-size: 13px;
+    -fx-font-size: 13.5px;
     -fx-font-weight: bold;
     -fx-padding: 12 16 12 16;
     -fx-cursor: hand;
@@ -192,7 +201,7 @@
 }
 
 .nav-button-danger:hover {
-    -fx-background-color: rgba(239, 68, 68, 0.1);
+    -fx-background-color: rgba(244, 63, 94, 0.1);
     -fx-text-fill: -color-danger;
 }
 
@@ -201,7 +210,7 @@
    ============================================================================ */
 
 .separator {
-    -fx-padding: 8 0 8 0;
+    -fx-padding: 10 0 10 0;
 }
 
 .separator .line {
@@ -210,13 +219,13 @@
 }
 
 /* ============================================================================
-   ListViews & Sleek Cyber Cells
+   Sleek Lists and Data Tables
    ============================================================================ */
 
 .list-view {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
-    -fx-padding: 4;
+    -fx-padding: 6;
     -fx-border-color: -color-border;
     -fx-border-width: 1;
     -fx-border-radius: 8;
@@ -226,10 +235,10 @@
 .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -color-text;
-    -fx-padding: 12 16 12 16;
+    -fx-padding: 14 18 14 18;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
-    -fx-margin: 2 0 2 0;
+    -fx-margin: 3 0 3 0;
 }
 
 .list-cell:filled:hover {
@@ -238,7 +247,7 @@
 }
 
 .list-cell:filled:selected {
-    -fx-background-color: #1e293b;
+    -fx-background-color: #16203a;
     -fx-border-color: -color-accent;
     -fx-border-width: 1;
     -fx-text-fill: -color-accent;
@@ -251,8 +260,8 @@
     -fx-font-family: "Consolas", "Courier New", monospace;
     -fx-font-size: 12.5px;
     -fx-border-color: -color-border;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
 }
 
 .text-area .content {
@@ -260,7 +269,7 @@
 }
 
 /* ============================================================================
-   Scrollbars Refinement
+   Custom Scrollbars (SaaS Minimalist Thumb)
    ============================================================================ */
 
 .scroll-pane {
@@ -277,7 +286,7 @@
 
 .scroll-bar:vertical .thumb, .scroll-bar:horizontal .thumb {
     -fx-background-color: -color-border;
-    -fx-background-radius: 10;
+    -fx-background-radius: 12;
 }
 
 .scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover {
@@ -285,29 +294,31 @@
 }
 
 /* ============================================================================
-   Dashboard & KPI Metrics Grid
+   KPI Metrics Cards Dashboard
    ============================================================================ */
 
 .dashboard-grid {
-    -fx-hgap: 20;
-    -fx-vgap: 20;
-    -fx-padding: 10 0 10 0;
+    -fx-hgap: 24;
+    -fx-vgap: 24;
+    -fx-padding: 12 0 12 0;
 }
 
 .kpi-card {
-    -fx-background-color: -color-surface;
+    -fx-background-color: linear-gradient(to bottom right, -color-surface, #0f152b);
     -fx-border-color: -color-border;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 16;
-    -fx-min-width: 210;
-    -fx-pref-width: 230;
-    -fx-min-height: 110;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 20;
+    -fx-min-width: 220;
+    -fx-pref-width: 240;
+    -fx-min-height: 120;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
 }
 
 .kpi-card:hover {
     -fx-border-color: -color-accent;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 210, 255, 0.15), 12, 0, 0, 4);
 }
 
 .kpi-title {
@@ -315,10 +326,11 @@
     -fx-font-weight: bold;
     -fx-text-fill: -color-text-muted;
     -fx-text-transform: uppercase;
+    -fx-letter-spacing: 0.5px;
 }
 
 .kpi-value {
-    -fx-font-size: 26px;
+    -fx-font-size: 28px;
     -fx-font-weight: 800;
     -fx-text-fill: -color-text;
     -fx-padding: 8 0 0 0;
@@ -333,7 +345,7 @@
 }
 
 .kpi-value-warning {
-    -fx-text-fill: -color-medium;
+    -fx-text-fill: -color-warning;
 }
 
 .kpi-value-accent {
@@ -341,52 +353,54 @@
 }
 
 .dashboard-section-title {
-    -fx-font-size: 16px;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-text-fill: -color-text;
-    -fx-padding: 20 0 5 0;
+    -fx-padding: 22 0 6 0;
 }
 
 .path-list-container {
     -fx-background-color: -color-surface;
     -fx-border-color: -color-border;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 16;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
 }
 
 .monitored-path-item {
     -fx-font-family: "Consolas", "Courier New", monospace;
-    -fx-font-size: 12px;
+    -fx-font-size: 12.5px;
     -fx-text-fill: -color-accent;
     -fx-padding: 4 0 4 0;
 }
 
 .security-terminal {
-    -fx-control-inner-background: #080b11;
-    -fx-text-fill: #00ff66;
+    -fx-control-inner-background: #04060d;
+    -fx-text-fill: #10b981;
     -fx-font-family: "Consolas", "Courier New", monospace;
     -fx-font-size: 12.5px;
     -fx-border-color: -color-border;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 10;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 12;
 }
 
 .rules-list-container {
     -fx-background-color: -color-surface;
     -fx-border-color: -color-border;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 16;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
 }
 
 .rule-item {
-    -fx-font-size: 12px;
-    -fx-padding: 4 0 4 0;
+    -fx-font-size: 12.5px;
+    -fx-padding: 6 0 6 0;
 }
 
 .rule-name {
@@ -398,5 +412,3 @@
     -fx-text-fill: -color-success;
     -fx-font-weight: bold;
 }
-
-
