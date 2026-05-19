@@ -86,13 +86,13 @@
 
                         <!-- Threat Analysis Description Card -->
                         <VBox spacing="10" style="-fx-padding: 14; -fx-background-color: #080b11; -fx-background-radius: 6; -fx-border-color: #1e293b; -fx-border-width: 1;">
-                            <Label text="🛡️ THREAT DESCRIPTION &amp; ANALYSIS" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: -color-accent;"/>
+                            <Label text="THREAT DESCRIPTION &amp; ANALYSIS" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: -color-accent;"/>
                             <Label fx:id="lblSaaSDescription" text="Select an evidence item to display the automated security analysis." style="-fx-font-size: 12px; -fx-text-fill: #cbd5e1;" wrapText="true"/>
                         </VBox>
 
                         <!-- Incident Playbook Actions -->
                         <VBox spacing="10" style="-fx-padding: 14; -fx-background-color: #080b11; -fx-background-radius: 6; -fx-border-color: #ef4444; -fx-border-width: 1; -fx-border-style: dashed;">
-                            <Label text="🚨 RECOMMENDED REMEDIATION PLAYBOOK" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
+                            <Label text="RECOMMENDED REMEDIATION PLAYBOOK" style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
                             <Label fx:id="lblSaaSPlaybook" text="Follow suggested operations to secure target paths." style="-fx-font-size: 12px; -fx-text-fill: #cbd5e1; -fx-line-spacing: 4;" wrapText="true"/>
                         </VBox>
                     </VBox>

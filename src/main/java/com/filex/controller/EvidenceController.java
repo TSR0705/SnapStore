@@ -259,16 +259,23 @@ public final class EvidenceController {
     // Dynamic SaaS layout population
     if (lblSaaSAlertSeverity != null) {
       lblSaaSAlertSeverity.setText(evidence.getSeverity());
-      String color =
+      String bgStyle =
           switch (evidence.getSeverity()) {
-            case "CRITICAL", "HIGH" -> "#ef4444";
-            case "MEDIUM" -> "#fbbf24";
-            default -> "#10b981";
+            case "CRITICAL", "HIGH" ->
+                "-fx-background-color: rgba(244, 63, 94, 0.15); -fx-text-fill: #f43f5e; -fx-border-color: #f43f5e;";
+            case "MEDIUM" ->
+                "-fx-background-color: rgba(251, 191, 36, 0.15); -fx-text-fill: #fbbf24; -fx-border-color: #fbbf24;";
+            default ->
+                "-fx-background-color: rgba(16, 185, 129, 0.15); -fx-text-fill: #10b981; -fx-border-color: #10b981;";
           };
-      lblSaaSAlertSeverity.setStyle("-fx-background-color: " + color + "; -fx-text-fill: black;");
+      lblSaaSAlertSeverity.setStyle(
+          bgStyle
+              + " -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3 8 3 8; -fx-background-radius: 4; -fx-border-radius: 4; -fx-border-width: 1; -fx-letter-spacing: 0.5px;");
     }
     if (lblSaaSAlertConfidence != null) {
       lblSaaSAlertConfidence.setText(evidence.getConfidence());
+      lblSaaSAlertConfidence.setStyle(
+          "-fx-background-color: rgba(148, 163, 184, 0.1); -fx-text-fill: #94a3b8; -fx-border-color: #334155; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 3 8 3 8; -fx-font-weight: bold; -fx-font-size: 10px;");
     }
 
     String friendlyPolicy = evidence.getRuleName();
@@ -428,6 +435,57 @@ public final class EvidenceController {
 
   /** Custom list cell for evidence items. */
   private static class EvidenceListCell extends ListCell<EvidenceSummary> {
+
+    private javafx.scene.Node createSVGIcon(String rule) {
+      javafx.scene.shape.SVGPath svg = new javafx.scene.shape.SVGPath();
+      svg.setStrokeWidth(1.5);
+      svg.setFill(javafx.scene.paint.Color.TRANSPARENT);
+
+      String bgStyle;
+      if (rule.contains("SensitiveDirectory")) {
+        // Shield Icon
+        svg.setContent("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z");
+        svg.setStroke(javafx.scene.paint.Color.web("#38bdf8")); // sky blue
+        bgStyle = "-fx-background-color: rgba(56, 189, 248, 0.1); -fx-background-radius: 6;";
+      } else if (rule.contains("RapidModification")) {
+        // Lightning Bolt
+        svg.setContent("M13 2L3 14h9l-1 8 10-12h-9l1-8z");
+        svg.setStroke(javafx.scene.paint.Color.web("#fb7185")); // rose
+        bgStyle = "-fx-background-color: rgba(251, 113, 133, 0.1); -fx-background-radius: 6;";
+      } else if (rule.contains("MassDeletion")) {
+        // Trash Can
+        svg.setContent(
+            "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16");
+        svg.setStroke(javafx.scene.paint.Color.web("#fb923c")); // orange
+        bgStyle = "-fx-background-color: rgba(251, 146, 60, 0.1); -fx-background-radius: 6;";
+      } else if (rule.contains("SuspiciousExtension")) {
+        // Lock
+        svg.setContent(
+            "M19 11H5a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2v-8a2 2 0 00-2-2z M7 11V7a5 5 0 0110 0v4");
+        svg.setStroke(javafx.scene.paint.Color.web("#facc15")); // yellow
+        bgStyle = "-fx-background-color: rgba(250, 204, 21, 0.1); -fx-background-radius: 6;";
+      } else if (rule.contains("HiddenFile")) {
+        // Eye Off
+        svg.setContent(
+            "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22");
+        svg.setStroke(javafx.scene.paint.Color.web("#a78bfa")); // violet
+        bgStyle = "-fx-background-color: rgba(167, 139, 250, 0.1); -fx-background-radius: 6;";
+      } else {
+        // Standard Document File
+        svg.setContent("M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9zM13 2v7h7");
+        svg.setStroke(javafx.scene.paint.Color.web("#94a3b8")); // slate
+        bgStyle = "-fx-background-color: rgba(148, 163, 184, 0.1); -fx-background-radius: 6;";
+      }
+
+      javafx.scene.layout.StackPane container = new javafx.scene.layout.StackPane(svg);
+      container.setStyle(bgStyle);
+      container.setPrefSize(32, 32);
+      container.setMinSize(32, 32);
+      container.setMaxSize(32, 32);
+      container.setAlignment(javafx.geometry.Pos.CENTER);
+      return container;
+    }
+
     @Override
     protected void updateItem(EvidenceSummary evidence, boolean empty) {
       super.updateItem(evidence, empty);
@@ -440,21 +498,12 @@ public final class EvidenceController {
         setText(null);
 
         // Container
-        javafx.scene.layout.HBox cellContainer = new javafx.scene.layout.HBox(10);
+        javafx.scene.layout.HBox cellContainer = new javafx.scene.layout.HBox(14);
         cellContainer.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        cellContainer.setPadding(new javafx.geometry.Insets(4, 6, 4, 6));
+        cellContainer.setPadding(new javafx.geometry.Insets(10, 12, 10, 12));
 
-        // 1. Icon indicator based on rule
-        String rule = evidence.getRuleName();
-        String icon = "📁";
-        if (rule.contains("SensitiveDirectory")) icon = "🛡️";
-        else if (rule.contains("RapidModification")) icon = "💥";
-        else if (rule.contains("MassDeletion")) icon = "🗑️";
-        else if (rule.contains("SuspiciousExtension")) icon = "🔄";
-        else if (rule.contains("HiddenFile")) icon = "🕵️";
-
-        Label lblIcon = new Label(icon);
-        lblIcon.setStyle("-fx-font-size: 16px;");
+        // 1. Crisp clean hardware-accelerated Vector SVG Icon
+        javafx.scene.Node iconNode = createSVGIcon(evidence.getRuleName());
 
         // 2. Text layout (Filename + short relative directory)
         javafx.scene.layout.VBox textContainer = new javafx.scene.layout.VBox(2);
@@ -474,15 +523,15 @@ public final class EvidenceController {
 
         Label lblFilename = new Label(filename);
         lblFilename.setStyle(
-            "-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: -color-text;");
+            "-fx-font-weight: bold; -fx-font-size: 12.5px; -fx-text-fill: -color-text;");
 
         String timeStr = TIMESTAMP_FORMAT.format(evidence.getDetectedAt());
         Label lblDetails =
-            new Label(String.format("Location: %s | Time: %s", parentDir + filename, timeStr));
-        lblDetails.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #a0aec0;");
+            new Label(String.format("Location: %s  •  Time: %s", parentDir + filename, timeStr));
+        lblDetails.setStyle("-fx-font-size: 11px; -fx-text-fill: -color-text-muted;");
 
         textContainer.getChildren().addAll(lblFilename, lblDetails);
-        cellContainer.getChildren().addAll(lblIcon, textContainer);
+        cellContainer.getChildren().addAll(iconNode, textContainer);
 
         setGraphic(cellContainer);
         setStyle("-fx-background-color: transparent;");

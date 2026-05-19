@@ -480,7 +480,7 @@ public final class OverviewController {
         vboxPaths.getChildren().add(noPathsLabel);
       } else {
         for (Path root : monitoredRoots) {
-          Label pathLabel = new Label("📂  " + root.toAbsolutePath().normalize());
+          Label pathLabel = new Label("»  " + root.toAbsolutePath().normalize());
           pathLabel.getStyleClass().add("monitored-path-item");
           vboxPaths.getChildren().add(pathLabel);
         }
@@ -499,10 +499,10 @@ public final class OverviewController {
           ruleBox.getStyleClass().add("rule-item");
           ruleBox.setAlignment(Pos.CENTER_LEFT);
 
-          Label lblRuleName = new Label("🛡️  " + rule.name());
+          Label lblRuleName = new Label("✔  " + rule.name());
           lblRuleName.getStyleClass().add("rule-name");
 
-          Label lblRuleStatus = new Label(rule.isEnabled() ? "[ACTIVE]" : "[DISABLED]");
+          Label lblRuleStatus = new Label(rule.isEnabled() ? "ACTIVE" : "DISABLED");
           lblRuleStatus.getStyleClass().add("rule-status-active");
 
           ruleBox.getChildren().addAll(lblRuleName, lblRuleStatus);

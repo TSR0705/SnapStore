@@ -51,6 +51,9 @@ public final class HiddenFileCreationRule implements DetectionRule {
 
     RawFileCreatedEvent event = (RawFileCreatedEvent) context.currentEvent();
     Path path = event.path();
+    if (path == null || path.getFileName() == null) {
+      return DetectionResult.notDetected();
+    }
     String filename = path.getFileName().toString();
 
     // Check if file is hidden (starts with '.')

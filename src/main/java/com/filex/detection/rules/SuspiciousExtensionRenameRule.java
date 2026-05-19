@@ -69,6 +69,9 @@ public final class SuspiciousExtensionRenameRule implements DetectionRule {
 
     RawFileCreatedEvent event = (RawFileCreatedEvent) context.currentEvent();
     Path path = event.path();
+    if (path == null || path.getFileName() == null) {
+      return DetectionResult.notDetected();
+    }
     String filename = path.getFileName().toString().toLowerCase();
 
     // Check for suspicious extensions

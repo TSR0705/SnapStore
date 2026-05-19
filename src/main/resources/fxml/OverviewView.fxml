@@ -134,23 +134,23 @@
                         <ColumnConstraints percentWidth="20.0"/>
                     </columnConstraints>
 
-                    <Button fx:id="btnSimRansom" text="💥 Ransomware" onAction="#onSimulateRansom"
+                    <Button fx:id="btnSimRansom" text="Ransomware" onAction="#onSimulateRansom"
                             GridPane.columnIndex="0" maxWidth="Infinity"
                             style="-fx-background-color: #3b1c1c; -fx-text-fill: #ff6666; -fx-border-color: #ff3333; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
 
-                    <Button fx:id="btnSimMassDelete" text="🗑️ Mass Deletion" onAction="#onSimulateMassDelete"
+                    <Button fx:id="btnSimMassDelete" text="Mass Deletion" onAction="#onSimulateMassDelete"
                             GridPane.columnIndex="1" maxWidth="Infinity"
                             style="-fx-background-color: #3b2c1c; -fx-text-fill: #ffb866; -fx-border-color: #ff9933; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
 
-                    <Button fx:id="btnSimRename" text="🔄 Extension Lock" onAction="#onSimulateRename"
+                    <Button fx:id="btnSimRename" text="Extension Lock" onAction="#onSimulateRename"
                             GridPane.columnIndex="2" maxWidth="Infinity"
                             style="-fx-background-color: #3b3b1c; -fx-text-fill: #ffff66; -fx-border-color: #ffff33; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
 
-                    <Button fx:id="btnSimHidden" text="🕵️ Hidden Payload" onAction="#onSimulateHidden"
+                    <Button fx:id="btnSimHidden" text="Hidden Payload" onAction="#onSimulateHidden"
                             GridPane.columnIndex="3" maxWidth="Infinity"
                             style="-fx-background-color: #1c3b3b; -fx-text-fill: #66ffff; -fx-border-color: #33ffff; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
 
-                    <Button fx:id="btnSimSensitive" text="🔑 Sensitive Config" onAction="#onSimulateSensitive"
+                    <Button fx:id="btnSimSensitive" text="Sensitive Config" onAction="#onSimulateSensitive"
                             GridPane.columnIndex="4" maxWidth="Infinity"
                             style="-fx-background-color: #2d1c3b; -fx-text-fill: #d466ff; -fx-border-color: #b833ff; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand; -fx-alignment: CENTER; -fx-font-weight: bold;"/>
                 </GridPane>

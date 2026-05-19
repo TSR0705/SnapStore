@@ -114,6 +114,9 @@ public final class SensitiveDirectoryActivityRule implements DetectionRule {
   }
 
   private String findSensitiveDirectory(Path path) {
+    if (path == null) {
+      return null;
+    }
     String pathStr = path.toString();
     for (String sensitiveDir : SENSITIVE_DIRECTORIES) {
       if (pathStr.contains(sensitiveDir)) {
