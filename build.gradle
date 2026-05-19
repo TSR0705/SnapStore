@@ -43,7 +43,7 @@ if (osName.contains("win")) {
 
 dependencies {
     // Core SQLite Forensic Engine
-    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'org.xerial:sqlite-jdbc:3.53.1.0'
 
     // Core Observability and rolling diagnostics
     implementation 'org.slf4j:slf4j-api:2.0.13'
