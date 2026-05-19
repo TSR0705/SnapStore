@@ -577,7 +577,7 @@ class MonitoringEngineAuditTest {
 
         for (int i = 0; i < 5; i++) {
             Files.writeString(tempDir.resolve("file" + i + ".txt"), "content");
-            Thread.sleep(50); // Small pause for stable, discrete inotify delivery
+            Thread.sleep(300); // Pause for stable inotify delivery on slow Linux CI
         }
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
