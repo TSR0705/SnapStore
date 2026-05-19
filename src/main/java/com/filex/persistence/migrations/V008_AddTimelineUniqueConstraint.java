@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Phase 1G Fix: Add UNIQUE constraint on forensic_timeline to prevent sequence number race conditions.
+ * Migration: Add UNIQUE constraint on forensic_timeline to prevent sequence number race conditions.
  *
  * <p>CRITICAL FIX: Prevents duplicate sequence numbers at the same timestamp,
  * ensuring deterministic timeline ordering under concurrent load.

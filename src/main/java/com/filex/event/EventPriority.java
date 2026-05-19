@@ -14,7 +14,6 @@ package com.filex.event;
  * </ul>
  *
  * <p>Current implementation treats all priorities equally.
- * Future phases may introduce priority-aware dispatch scheduling.
  */
 public enum EventPriority {
 

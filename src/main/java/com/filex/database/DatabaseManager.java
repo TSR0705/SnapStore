@@ -25,7 +25,7 @@ import java.sql.Statement;
  * <p>Design notes:
  * <ul>
  *   <li>A single shared connection is appropriate for a desktop agent
- *       with low concurrency. Connection pooling is deferred to later phases.</li>
+ *       with low concurrency.</li>
  *   <li>WAL mode is enabled for better read/write concurrency.</li>
  *   <li>Foreign key enforcement is enabled explicitly.</li>
  * </ul>

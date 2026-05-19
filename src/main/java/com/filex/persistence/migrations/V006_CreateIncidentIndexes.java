@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Phase 1G: Incident and timeline indexing strategy.
+ * Migration: Create indexes for incident and timeline queries.
  *
  * <p>Creates indexes for:
  * <ul>

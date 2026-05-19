@@ -2,9 +2,6 @@ package com.filex.event;
 
 /**
  * Base class for alert events.
- *
- * <p>Reserved for Phase 3 (Detection Engine).
- * Placeholder to establish event hierarchy.
  */
 public abstract class AlertEvent extends AppEvent {
 

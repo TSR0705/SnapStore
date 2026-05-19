@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Phase 1G: Incident persistence and forensic timeline foundation.
+ * Migration: Create incident persistence and forensic timeline tables.
  *
  * <p>Creates tables for:
  * <ul>

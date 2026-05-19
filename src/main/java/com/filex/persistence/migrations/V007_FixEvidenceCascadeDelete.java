@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Phase 1G Fix: Change CASCADE DELETE to RESTRICT for forensic integrity.
+ * Migration: Change CASCADE DELETE to RESTRICT on evidence for forensic integrity.
  *
  * <p>CRITICAL FIX: Evidence records must NEVER be deleted when incidents are deleted.
  * This migration recreates the incident_evidence table with ON DELETE RESTRICT
