@@ -10,7 +10,7 @@
 
 ---
 
-**FileX** is a production-grade, highly optimized local security agent designed to monitor host filesystem operations at the OS API layer, analyze telemetry in real-time using parallel heuristics, and persist security incidents inside a relational forensic archive. 
+**FileX** is a production-grade, highly optimized local security agent designed to monitor host filesystem operations at the OS API layer, analyze telemetry in real-time using parallel heuristics, and persist security incidents inside a relational forensic archive.
 
 Built on Java 21, JavaFX, and an asynchronous event-driven architecture, FileX stands out with zero global singleton abuse, clean constructor dependency injection, strict thread boundary isolation, and a premium SaaS-grade threat briefing workspace.
 
@@ -39,7 +39,7 @@ FileX utilizes a highly decoupled, reactive architectural pipeline. Below is the
 graph TD
     %% Core Nodes
     OS["Windows Kernel (ReadDirectoryChangesW) / Linux inotify"]
-    
+
     subgraph Monitoring Pipeline [Engine telemetry Layer]
         WS["java.nio.file.WatchService"]
         ME["MonitoringEngine (filex-watch-loop)"]
@@ -71,17 +71,17 @@ graph TD
     ME -->|Normalize| RC
     ME -->|Normalize| RM
     ME -->|Normalize| RD
-    
+
     RC & RM & RD -->|Publish| EB
     EB -->|Asynchronous Dispatch| DE
-    
+
     DE -->|Evaluate Threat Rules| AE
     AE -->|Generate Incident| IC
     IC -->|Publish| EB
-    
+
     EB -->|Capture Incident| IPS
     IPS -->|Transaction Write| DB
-    
+
     EB -->|Live UI Refresh Callback| IWC
     IWC -->|Asynchronous SQL Query| DB
     IWC -->|Render Cards| UI
@@ -117,7 +117,7 @@ sequenceDiagram
     activate Watcher
     Watcher->>EBus: Publish RawFileCreatedEvent
     deactivate Watcher
-    
+
     activate EBus
     EBus->>Evaluator: Dispatch (Non-blocking queue)
     deactivate EBus
@@ -195,7 +195,7 @@ package com.filex.detection.rules;
 import com.filex.detection.*;
 
 public final class MalwareNameRule implements DetectionRule {
-    
+
     @Override
     public String name() {
         return "MalwareFileNameDetection";
@@ -243,5 +243,5 @@ appContext.detectionEngine().registerRule(new MalwareNameRule());
 
 ## 📜 Licensing & Authors
 
-*   **Author:** TSR0705  
+*   **Author:** TSR0705
 *   **License:** Proprietary — All Rights Reserved.

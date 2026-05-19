@@ -1,283 +1,253 @@
 package com.filex.database;
 
 import com.filex.config.AppConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages the SQLite database connection lifecycle.
  *
  * <p>Responsibilities:
+ *
  * <ul>
- *   <li>Open and validate the SQLite connection on startup</li>
- *   <li>Run schema bootstrap (DDL) on first launch</li>
- *   <li>Provide a single shared {@link Connection} for the application</li>
- *   <li>Close the connection cleanly on shutdown</li>
+ *   <li>Open and validate the SQLite connection on startup
+ *   <li>Run schema bootstrap (DDL) on first launch
+ *   <li>Provide a single shared {@link Connection} for the application
+ *   <li>Close the connection cleanly on shutdown
  * </ul>
  *
  * <p>Design notes:
+ *
  * <ul>
- *   <li>A single shared connection is appropriate for a desktop agent
- *       with low concurrency.</li>
- *   <li>WAL mode is enabled for better read/write concurrency.</li>
- *   <li>Foreign key enforcement is enabled explicitly.</li>
+ *   <li>A single shared connection is appropriate for a desktop agent with low concurrency.
+ *   <li>WAL mode is enabled for better read/write concurrency.
+ *   <li>Foreign key enforcement is enabled explicitly.
  * </ul>
  *
- * <p>Repositories obtain connections via {@link #getConnection()} and
- * must NOT close the connection — only the manager closes it.
+ * <p>Repositories obtain connections via {@link #getConnection()} and must NOT close the connection
+ * — only the manager closes it.
  */
 public final class DatabaseManager {
 
-    private static final Logger log = LoggerFactory.getLogger(DatabaseManager.class);
+  private static final Logger log = LoggerFactory.getLogger(DatabaseManager.class);
 
-    private static final String JDBC_PREFIX = "jdbc:sqlite:";
+  private static final String JDBC_PREFIX = "jdbc:sqlite:";
 
-    private final Path databaseFile;
-    private Connection connection;
+  private final Path databaseFile;
+  private Connection connection;
 
-    /**
-     * @param config resolved application configuration; provides the DB path
-     */
-    public DatabaseManager(AppConfig config) {
-        this.databaseFile = config.databaseFile();
+  /**
+   * @param config resolved application configuration; provides the DB path
+   */
+  public DatabaseManager(AppConfig config) {
+    this.databaseFile = config.databaseFile();
+  }
+
+  /**
+   * Opens the SQLite connection and bootstraps the schema via migrations.
+   *
+   * @throws DatabaseException if the connection cannot be established
+   */
+  public void initialize() {
+    log.info("Initializing SQLite database at: {}", databaseFile);
+
+    ensureParentDirectoryExists();
+
+    try {
+      String jdbcUrl = JDBC_PREFIX + databaseFile.toAbsolutePath();
+      connection = DriverManager.getConnection(jdbcUrl);
+      log.info("SQLite connection established.");
+
+      applyPragmas();
+      runMigrations();
+      recordStartup();
+
+      log.info("Database initialization complete.");
+    } catch (SQLException e) {
+      throw new DatabaseException("Failed to initialize SQLite database: " + databaseFile, e);
     }
+  }
 
-    /**
-     * Opens the SQLite connection and bootstraps the schema via migrations.
-     *
-     * @throws DatabaseException if the connection cannot be established
-     */
-    public void initialize() {
-        log.info("Initializing SQLite database at: {}", databaseFile);
+  /**
+   * Returns the active database connection.
+   *
+   * @throws IllegalStateException if called before {@link #initialize()}
+   */
+  public Connection getConnection() {
+    if (connection == null) {
+      throw new IllegalStateException(
+          "DatabaseManager has not been initialized. Call initialize() first.");
+    }
+    return connection;
+  }
 
-        ensureParentDirectoryExists();
+  /** Creates a new transaction template for the current connection. */
+  public com.filex.persistence.TransactionTemplate transactionTemplate() {
+    return new com.filex.persistence.TransactionTemplate(getConnection());
+  }
 
-        try {
-            String jdbcUrl = JDBC_PREFIX + databaseFile.toAbsolutePath();
-            connection = DriverManager.getConnection(jdbcUrl);
-            log.info("SQLite connection established.");
+  /** Creates a new FileEventRepository instance. */
+  public com.filex.repository.FileEventRepository fileEventRepository() {
+    return new com.filex.repository.FileEventRepository(getConnection());
+  }
 
-            applyPragmas();
-            runMigrations();
-            recordStartup();
+  /** Creates a new SettingsRepository instance. */
+  public com.filex.repository.SettingsRepository settingsRepository() {
+    return new com.filex.repository.SettingsRepository(getConnection());
+  }
 
-            log.info("Database initialization complete.");
-        } catch (SQLException e) {
-            throw new DatabaseException("Failed to initialize SQLite database: " + databaseFile, e);
+  /** Creates a new AlertRepository instance. */
+  public com.filex.repository.AlertRepository alertRepository() {
+    return new com.filex.repository.AlertRepository(getConnection());
+  }
+
+  /** Creates a new FingerprintRepository instance. */
+  public com.filex.repository.FingerprintRepository fingerprintRepository() {
+    return new com.filex.repository.FingerprintRepository(getConnection());
+  }
+
+  /** Creates a new SyncQueueRepository instance. */
+  public com.filex.repository.SyncQueueRepository syncQueueRepository() {
+    return new com.filex.repository.SyncQueueRepository(getConnection());
+  }
+
+  /** Creates a new StartupLogRepository instance. */
+  public com.filex.repository.StartupLogRepository startupLogRepository() {
+    return new com.filex.repository.StartupLogRepository(getConnection());
+  }
+
+  /** Creates a new IncidentRepository instance. */
+  public com.filex.repository.IncidentRepository incidentRepository() {
+    return new com.filex.repository.IncidentRepository(getConnection());
+  }
+
+  /** Creates a new IncidentEvidenceRepository instance. */
+  public com.filex.repository.IncidentEvidenceRepository incidentEvidenceRepository() {
+    return new com.filex.repository.IncidentEvidenceRepository(getConnection());
+  }
+
+  /** Creates a new ForensicTimelineRepository instance. */
+  public com.filex.repository.ForensicTimelineRepository forensicTimelineRepository() {
+    return new com.filex.repository.ForensicTimelineRepository(getConnection());
+  }
+
+  /** Creates a new IncidentPersistenceService instance. */
+  public com.filex.persistence.IncidentPersistenceService incidentPersistenceService() {
+    return new com.filex.persistence.IncidentPersistenceService(getConnection());
+  }
+
+  /** Creates a new InvestigationQueryService instance. */
+  public com.filex.investigation.InvestigationQueryService investigationQueryService() {
+    return new com.filex.investigation.InvestigationQueryService(getConnection());
+  }
+
+  /** Creates a new ReplayNavigationService instance. */
+  public com.filex.investigation.ReplayNavigationService replayNavigationService(
+      com.filex.investigation.InvestigationMetrics metrics) {
+    return new com.filex.investigation.ReplayNavigationService(getConnection(), metrics);
+  }
+
+  /** Closes the database connection. Safe to call multiple times. */
+  public void shutdown() {
+    if (connection != null) {
+      try {
+        if (!connection.isClosed()) {
+          connection.close();
+          log.info("SQLite connection closed.");
         }
+      } catch (SQLException e) {
+        log.error("Error closing SQLite connection: {}", e.getMessage(), e);
+      } finally {
+        connection = null;
+      }
     }
+  }
 
-    /**
-     * Returns the active database connection.
-     *
-     * @throws IllegalStateException if called before {@link #initialize()}
-     */
-    public Connection getConnection() {
-        if (connection == null) {
-            throw new IllegalStateException("DatabaseManager has not been initialized. Call initialize() first.");
-        }
-        return connection;
+  /** Returns {@code true} if the connection is open and valid. */
+  public boolean isConnected() {
+    try {
+      return connection != null && !connection.isClosed() && connection.isValid(2);
+    } catch (SQLException e) {
+      return false;
     }
+  }
 
-    /**
-     * Creates a new transaction template for the current connection.
-     */
-    public com.filex.persistence.TransactionTemplate transactionTemplate() {
-        return new com.filex.persistence.TransactionTemplate(getConnection());
+  // -------------------------------------------------------------------------
+  // Private helpers
+  // -------------------------------------------------------------------------
+
+  private void ensureParentDirectoryExists() {
+    Path parent = databaseFile.getParent();
+    if (parent != null && !Files.exists(parent)) {
+      try {
+        Files.createDirectories(parent);
+        log.debug("Created database parent directory: {}", parent);
+      } catch (Exception e) {
+        throw new DatabaseException("Cannot create database directory: " + parent, e);
+      }
     }
+  }
 
-    /**
-     * Creates a new FileEventRepository instance.
-     */
-    public com.filex.repository.FileEventRepository fileEventRepository() {
-        return new com.filex.repository.FileEventRepository(getConnection());
+  private void applyPragmas() throws SQLException {
+    try (Statement stmt = connection.createStatement()) {
+      // Write-Ahead Logging for better concurrency
+      stmt.execute("PRAGMA journal_mode=WAL;");
+      // Enforce foreign key constraints
+      stmt.execute("PRAGMA foreign_keys=ON;");
+      // Synchronous mode: NORMAL is a good balance for desktop apps
+      stmt.execute("PRAGMA synchronous=NORMAL;");
+      log.debug("SQLite pragmas applied: WAL, foreign_keys=ON, synchronous=NORMAL");
     }
+  }
 
-    /**
-     * Creates a new SettingsRepository instance.
-     */
-    public com.filex.repository.SettingsRepository settingsRepository() {
-        return new com.filex.repository.SettingsRepository(getConnection());
+  /** Executes database migrations to ensure schema is up-to-date. */
+  private void runMigrations() throws SQLException {
+    log.debug("Running database migrations...");
+
+    com.filex.persistence.MigrationManager migrationManager =
+        new com.filex.persistence.MigrationManager(connection);
+
+    // Register all migrations in order
+    migrationManager.register(new com.filex.persistence.migrations.V001_InitialSchema());
+    migrationManager.register(new com.filex.persistence.migrations.V002_CreateIndexes());
+    migrationManager.register(
+        new com.filex.persistence.migrations.V003_FixSchemaVersionTimestamp());
+    migrationManager.register(
+        new com.filex.persistence.migrations.V004_AddSyncQueueUniqueConstraint());
+    migrationManager.register(new com.filex.persistence.migrations.V005_CreateIncidentTables());
+    migrationManager.register(new com.filex.persistence.migrations.V006_CreateIncidentIndexes());
+    migrationManager.register(new com.filex.persistence.migrations.V007_FixEvidenceCascadeDelete());
+    migrationManager.register(
+        new com.filex.persistence.migrations.V008_AddTimelineUniqueConstraint());
+
+    // Execute pending migrations
+    migrationManager.migrate();
+
+    log.info("Database migrations complete.");
+  }
+
+  /** Records application startup in the audit log. */
+  private void recordStartup() throws SQLException {
+    String appVersion = System.getProperty("filex.version", "1.0.0-SNAPSHOT");
+    String hostname = getHostname();
+    String osName = System.getProperty("os.name", "unknown");
+    String javaVer = System.getProperty("java.version", "unknown");
+
+    com.filex.repository.StartupLogRepository startupLogRepo = startupLogRepository();
+    startupLogRepo.recordStartup(appVersion, hostname, osName, javaVer);
+  }
+
+  private static String getHostname() {
+    try {
+      return java.net.InetAddress.getLocalHost().getHostName();
+    } catch (Exception e) {
+      return "unknown";
     }
-
-    /**
-     * Creates a new AlertRepository instance.
-     */
-    public com.filex.repository.AlertRepository alertRepository() {
-        return new com.filex.repository.AlertRepository(getConnection());
-    }
-
-    /**
-     * Creates a new FingerprintRepository instance.
-     */
-    public com.filex.repository.FingerprintRepository fingerprintRepository() {
-        return new com.filex.repository.FingerprintRepository(getConnection());
-    }
-
-    /**
-     * Creates a new SyncQueueRepository instance.
-     */
-    public com.filex.repository.SyncQueueRepository syncQueueRepository() {
-        return new com.filex.repository.SyncQueueRepository(getConnection());
-    }
-
-    /**
-     * Creates a new StartupLogRepository instance.
-     */
-    public com.filex.repository.StartupLogRepository startupLogRepository() {
-        return new com.filex.repository.StartupLogRepository(getConnection());
-    }
-
-    /**
-     * Creates a new IncidentRepository instance.
-     */
-    public com.filex.repository.IncidentRepository incidentRepository() {
-        return new com.filex.repository.IncidentRepository(getConnection());
-    }
-
-    /**
-     * Creates a new IncidentEvidenceRepository instance.
-     */
-    public com.filex.repository.IncidentEvidenceRepository incidentEvidenceRepository() {
-        return new com.filex.repository.IncidentEvidenceRepository(getConnection());
-    }
-
-    /**
-     * Creates a new ForensicTimelineRepository instance.
-     */
-    public com.filex.repository.ForensicTimelineRepository forensicTimelineRepository() {
-        return new com.filex.repository.ForensicTimelineRepository(getConnection());
-    }
-
-    /**
-     * Creates a new IncidentPersistenceService instance.
-     */
-    public com.filex.persistence.IncidentPersistenceService incidentPersistenceService() {
-        return new com.filex.persistence.IncidentPersistenceService(getConnection());
-    }
-
-    /**
-     * Creates a new InvestigationQueryService instance.
-     */
-    public com.filex.investigation.InvestigationQueryService investigationQueryService() {
-        return new com.filex.investigation.InvestigationQueryService(getConnection());
-    }
-
-    /**
-     * Creates a new ReplayNavigationService instance.
-     */
-    public com.filex.investigation.ReplayNavigationService replayNavigationService(
-            com.filex.investigation.InvestigationMetrics metrics) {
-        return new com.filex.investigation.ReplayNavigationService(getConnection(), metrics);
-    }
-
-    /**
-     * Closes the database connection. Safe to call multiple times.
-     */
-    public void shutdown() {
-        if (connection != null) {
-            try {
-                if (!connection.isClosed()) {
-                    connection.close();
-                    log.info("SQLite connection closed.");
-                }
-            } catch (SQLException e) {
-                log.error("Error closing SQLite connection: {}", e.getMessage(), e);
-            } finally {
-                connection = null;
-            }
-        }
-    }
-
-    /**
-     * Returns {@code true} if the connection is open and valid.
-     */
-    public boolean isConnected() {
-        try {
-            return connection != null && !connection.isClosed() && connection.isValid(2);
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    private void ensureParentDirectoryExists() {
-        Path parent = databaseFile.getParent();
-        if (parent != null && !Files.exists(parent)) {
-            try {
-                Files.createDirectories(parent);
-                log.debug("Created database parent directory: {}", parent);
-            } catch (Exception e) {
-                throw new DatabaseException("Cannot create database directory: " + parent, e);
-            }
-        }
-    }
-
-    private void applyPragmas() throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
-            // Write-Ahead Logging for better concurrency
-            stmt.execute("PRAGMA journal_mode=WAL;");
-            // Enforce foreign key constraints
-            stmt.execute("PRAGMA foreign_keys=ON;");
-            // Synchronous mode: NORMAL is a good balance for desktop apps
-            stmt.execute("PRAGMA synchronous=NORMAL;");
-            log.debug("SQLite pragmas applied: WAL, foreign_keys=ON, synchronous=NORMAL");
-        }
-    }
-
-    /**
-     * Executes database migrations to ensure schema is up-to-date.
-     */
-    private void runMigrations() throws SQLException {
-        log.debug("Running database migrations...");
-
-        com.filex.persistence.MigrationManager migrationManager =
-                new com.filex.persistence.MigrationManager(connection);
-
-        // Register all migrations in order
-        migrationManager.register(new com.filex.persistence.migrations.V001_InitialSchema());
-        migrationManager.register(new com.filex.persistence.migrations.V002_CreateIndexes());
-        migrationManager.register(new com.filex.persistence.migrations.V003_FixSchemaVersionTimestamp());
-        migrationManager.register(new com.filex.persistence.migrations.V004_AddSyncQueueUniqueConstraint());
-        migrationManager.register(new com.filex.persistence.migrations.V005_CreateIncidentTables());
-        migrationManager.register(new com.filex.persistence.migrations.V006_CreateIncidentIndexes());
-        migrationManager.register(new com.filex.persistence.migrations.V007_FixEvidenceCascadeDelete());
-        migrationManager.register(new com.filex.persistence.migrations.V008_AddTimelineUniqueConstraint());
-
-        // Execute pending migrations
-        migrationManager.migrate();
-
-        log.info("Database migrations complete.");
-    }
-
-    /**
-     * Records application startup in the audit log.
-     */
-    private void recordStartup() throws SQLException {
-        String appVersion = System.getProperty("filex.version", "1.0.0-SNAPSHOT");
-        String hostname = getHostname();
-        String osName = System.getProperty("os.name", "unknown");
-        String javaVer = System.getProperty("java.version", "unknown");
-
-        com.filex.repository.StartupLogRepository startupLogRepo = startupLogRepository();
-        startupLogRepo.recordStartup(appVersion, hostname, osName, javaVer);
-    }
-
-    private static String getHostname() {
-        try {
-            return java.net.InetAddress.getLocalHost().getHostName();
-        } catch (Exception e) {
-            return "unknown";
-        }
-    }
+  }
 }

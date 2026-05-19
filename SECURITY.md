@@ -1,6 +1,6 @@
 # 🛡️ Security Policy & Vulnerability Disclosure
 
-We take the security of **FileX** seriously. As an endpoint security monitoring agent, maintaining absolute trust and data integrity is our highest priority. 
+We take the security of **FileX** seriously. As an endpoint security monitoring agent, maintaining absolute trust and data integrity is our highest priority.
 
 ---
 

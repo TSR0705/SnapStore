@@ -1,7 +1,6 @@
 package com.filex.persistence.migrations;
 
 import com.filex.persistence.Migration;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -10,33 +9,35 @@ import java.sql.Statement;
  * Initial schema migration.
  *
  * <p>Creates the core tables for FileX:
+ *
  * <ul>
- *   <li>file_events — immutable file activity event log</li>
- *   <li>alerts — generated alerts from suspicious activity</li>
- *   <li>file_fingerprints — file hash/metadata cache</li>
- *   <li>sync_queue — offline-first sync queue for backend</li>
- *   <li>app_settings — persistent application settings</li>
- *   <li>app_startup_log — application startup audit trail</li>
+ *   <li>file_events — immutable file activity event log
+ *   <li>alerts — generated alerts from suspicious activity
+ *   <li>file_fingerprints — file hash/metadata cache
+ *   <li>sync_queue — offline-first sync queue for backend
+ *   <li>app_settings — persistent application settings
+ *   <li>app_startup_log — application startup audit trail
  * </ul>
  */
 public final class V001_InitialSchema implements Migration {
 
-    @Override
-    public int version() {
-        return 1;
-    }
+  @Override
+  public int version() {
+    return 1;
+  }
 
-    @Override
-    public String description() {
-        return "Initial schema: file_events, alerts, fingerprints, sync_queue, settings";
-    }
+  @Override
+  public String description() {
+    return "Initial schema: file_events, alerts, fingerprints, sync_queue, settings";
+  }
 
-    @Override
-    public void migrate(Connection connection) throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
-            
-            // File events table - immutable event log
-            stmt.execute("""
+  @Override
+  public void migrate(Connection connection) throws SQLException {
+    try (Statement stmt = connection.createStatement()) {
+
+      // File events table - immutable event log
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS file_events (
                         id              INTEGER PRIMARY KEY AUTOINCREMENT,
                         event_id        TEXT    NOT NULL UNIQUE,
@@ -55,8 +56,9 @@ public final class V001_InitialSchema implements Migration {
                     );
                     """);
 
-            // Alerts table - generated alerts
-            stmt.execute("""
+      // Alerts table - generated alerts
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS alerts (
                         id              INTEGER PRIMARY KEY AUTOINCREMENT,
                         alert_id        TEXT    NOT NULL UNIQUE,
@@ -75,8 +77,9 @@ public final class V001_InitialSchema implements Migration {
                     );
                     """);
 
-            // File fingerprints table - hash/metadata cache
-            stmt.execute("""
+      // File fingerprints table - hash/metadata cache
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS file_fingerprints (
                         id              INTEGER PRIMARY KEY AUTOINCREMENT,
                         file_path       TEXT    NOT NULL UNIQUE,
@@ -90,8 +93,9 @@ public final class V001_InitialSchema implements Migration {
                     );
                     """);
 
-            // Sync queue table - offline-first sync support
-            stmt.execute("""
+      // Sync queue table - offline-first sync support
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS sync_queue (
                         id              INTEGER PRIMARY KEY AUTOINCREMENT,
                         entity_type     TEXT    NOT NULL,
@@ -107,8 +111,9 @@ public final class V001_InitialSchema implements Migration {
                     );
                     """);
 
-            // App settings table - persistent configuration
-            stmt.execute("""
+      // App settings table - persistent configuration
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS app_settings (
                         key             TEXT    PRIMARY KEY,
                         value           TEXT    NOT NULL,
@@ -118,8 +123,9 @@ public final class V001_InitialSchema implements Migration {
                     );
                     """);
 
-            // App startup log table - audit trail
-            stmt.execute("""
+      // App startup log table - audit trail
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS app_startup_log (
                         id              INTEGER PRIMARY KEY AUTOINCREMENT,
                         started_at      INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
@@ -129,6 +135,6 @@ public final class V001_InitialSchema implements Migration {
                         java_version    TEXT
                     );
                     """);
-        }
     }
+  }
 }

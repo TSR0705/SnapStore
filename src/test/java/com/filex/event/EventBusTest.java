@@ -1,277 +1,282 @@
 package com.filex.event;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-/**
- * Tests for EventBus functionality.
- */
+/** Tests for EventBus functionality. */
 class EventBusTest {
 
-    private EventBus eventBus;
+  private EventBus eventBus;
 
-    @BeforeEach
-    void setUp() {
-        eventBus = new EventBus(100); // Small queue for testing
+  @BeforeEach
+  void setUp() {
+    eventBus = new EventBus(100); // Small queue for testing
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (eventBus != null) {
+      eventBus.shutdown();
     }
+  }
 
-    @AfterEach
-    void tearDown() {
-        if (eventBus != null) {
-            eventBus.shutdown();
-        }
-    }
+  @Test
+  void testSubscribeAndPublish() {
+    // Given
+    List<ApplicationStartedEvent> received = new ArrayList<>();
+    eventBus.subscribe(ApplicationStartedEvent.class, received::add);
 
-    @Test
-    void testSubscribeAndPublish() {
-        // Given
-        List<ApplicationStartedEvent> received = new ArrayList<>();
-        eventBus.subscribe(ApplicationStartedEvent.class, received::add);
+    // When
+    ApplicationStartedEvent event = new ApplicationStartedEvent();
+    eventBus.publish(event);
 
-        // When
-        ApplicationStartedEvent event = new ApplicationStartedEvent();
-        eventBus.publish(event);
+    // Then
+    assertEquals(1, received.size());
+    assertSame(event, received.get(0));
+  }
 
-        // Then
-        assertEquals(1, received.size());
-        assertSame(event, received.get(0));
-    }
+  @Test
+  void testMultipleSubscribers() {
+    // Given
+    AtomicInteger count1 = new AtomicInteger(0);
+    AtomicInteger count2 = new AtomicInteger(0);
 
-    @Test
-    void testMultipleSubscribers() {
-        // Given
-        AtomicInteger count1 = new AtomicInteger(0);
-        AtomicInteger count2 = new AtomicInteger(0);
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> count1.incrementAndGet());
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> count2.incrementAndGet());
 
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> count1.incrementAndGet());
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> count2.incrementAndGet());
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
+    // Then
+    assertEquals(1, count1.get());
+    assertEquals(1, count2.get());
+  }
 
-        // Then
-        assertEquals(1, count1.get());
-        assertEquals(1, count2.get());
-    }
+  @Test
+  void testUnsubscribe() {
+    // Given
+    AtomicInteger count = new AtomicInteger(0);
+    var handler =
+        (java.util.function.Consumer<ApplicationStartedEvent>) e -> count.incrementAndGet();
 
-    @Test
-    void testUnsubscribe() {
-        // Given
-        AtomicInteger count = new AtomicInteger(0);
-        var handler = (java.util.function.Consumer<ApplicationStartedEvent>) e -> count.incrementAndGet();
+    eventBus.subscribe(ApplicationStartedEvent.class, handler);
+    eventBus.publish(new ApplicationStartedEvent());
+    assertEquals(1, count.get());
 
-        eventBus.subscribe(ApplicationStartedEvent.class, handler);
-        eventBus.publish(new ApplicationStartedEvent());
-        assertEquals(1, count.get());
+    // When
+    eventBus.unsubscribe(ApplicationStartedEvent.class, handler);
+    eventBus.publish(new ApplicationStartedEvent());
 
-        // When
-        eventBus.unsubscribe(ApplicationStartedEvent.class, handler);
-        eventBus.publish(new ApplicationStartedEvent());
+    // Then
+    assertEquals(1, count.get(), "Should not receive event after unsubscribe");
+  }
 
-        // Then
-        assertEquals(1, count.get(), "Should not receive event after unsubscribe");
-    }
+  @Test
+  void testSubscriberIsolation() {
+    // Given
+    AtomicInteger successCount = new AtomicInteger(0);
 
-    @Test
-    void testSubscriberIsolation() {
-        // Given
-        AtomicInteger successCount = new AtomicInteger(0);
-
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> {
-            throw new RuntimeException("Simulated failure");
+    eventBus.subscribe(
+        ApplicationStartedEvent.class,
+        e -> {
+          throw new RuntimeException("Simulated failure");
         });
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> successCount.incrementAndGet());
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> successCount.incrementAndGet());
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
 
-        // Then
-        assertEquals(1, successCount.get(), "Second subscriber should still receive event");
-    }
+    // Then
+    assertEquals(1, successCount.get(), "Second subscriber should still receive event");
+  }
 
-    @Test
-    void testAsyncPublish() throws Exception {
-        // Given
-        CountDownLatch latch = new CountDownLatch(1);
-        List<ApplicationStartedEvent> received = new ArrayList<>();
+  @Test
+  void testAsyncPublish() throws Exception {
+    // Given
+    CountDownLatch latch = new CountDownLatch(1);
+    List<ApplicationStartedEvent> received = new ArrayList<>();
 
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> {
-            received.add(e);
-            latch.countDown();
+    eventBus.subscribe(
+        ApplicationStartedEvent.class,
+        e -> {
+          received.add(e);
+          latch.countDown();
         });
 
-        // When
-        ApplicationStartedEvent event = new ApplicationStartedEvent();
-        eventBus.publishAsync(event);
+    // When
+    ApplicationStartedEvent event = new ApplicationStartedEvent();
+    eventBus.publishAsync(event);
 
-        // Then
-        assertTrue(latch.await(2, TimeUnit.SECONDS), "Event should be dispatched asynchronously");
-        assertEquals(1, received.size());
+    // Then
+    assertTrue(latch.await(2, TimeUnit.SECONDS), "Event should be dispatched asynchronously");
+    assertEquals(1, received.size());
+  }
+
+  @Test
+  void testQueueOverflow() throws Exception {
+    // Given - create bus with tiny queue and subscribe to slow down processing
+    EventBus smallBus = new EventBus(2);
+    CountDownLatch processingLatch = new CountDownLatch(1);
+
+    try {
+      // Block dispatcher by having a slow subscriber
+      smallBus.subscribe(
+          ApplicationStartedEvent.class,
+          e -> {
+            try {
+              processingLatch.await(); // Block until we're done testing
+            } catch (InterruptedException ex) {
+              Thread.currentThread().interrupt();
+            }
+          });
+
+      // When - fill queue (need to fill faster than dispatcher can process)
+      assertTrue(smallBus.tryPublishAsync(new ApplicationStartedEvent()));
+      assertTrue(smallBus.tryPublishAsync(new ApplicationStartedEvent()));
+
+      // Give dispatcher a moment to start processing
+      Thread.sleep(50);
+
+      // Then - queue should be full or nearly full
+      // Try to add more events
+      boolean accepted = smallBus.tryPublishAsync(new ApplicationStartedEvent());
+
+      // Release the latch to let processing continue
+      processingLatch.countDown();
+
+      // The test passes if we successfully demonstrated queue capacity limits
+      assertTrue(true, "Queue overflow handling works");
+
+    } finally {
+      processingLatch.countDown(); // Ensure we don't deadlock
+      smallBus.shutdown();
     }
+  }
 
-    @Test
-    void testQueueOverflow() throws Exception {
-        // Given - create bus with tiny queue and subscribe to slow down processing
-        EventBus smallBus = new EventBus(2);
-        CountDownLatch processingLatch = new CountDownLatch(1);
-        
-        try {
-            // Block dispatcher by having a slow subscriber
-            smallBus.subscribe(ApplicationStartedEvent.class, e -> {
-                try {
-                    processingLatch.await(); // Block until we're done testing
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                }
-            });
+  @Test
+  void testShutdown() throws Exception {
+    // Given
+    CountDownLatch latch = new CountDownLatch(1);
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> latch.countDown());
 
-            // When - fill queue (need to fill faster than dispatcher can process)
-            assertTrue(smallBus.tryPublishAsync(new ApplicationStartedEvent()));
-            assertTrue(smallBus.tryPublishAsync(new ApplicationStartedEvent()));
-            
-            // Give dispatcher a moment to start processing
-            Thread.sleep(50);
+    eventBus.publishAsync(new ApplicationStartedEvent());
+    assertTrue(latch.await(1, TimeUnit.SECONDS));
 
-            // Then - queue should be full or nearly full
-            // Try to add more events
-            boolean accepted = smallBus.tryPublishAsync(new ApplicationStartedEvent());
-            
-            // Release the latch to let processing continue
-            processingLatch.countDown();
-            
-            // The test passes if we successfully demonstrated queue capacity limits
-            assertTrue(true, "Queue overflow handling works");
-            
-        } finally {
-            processingLatch.countDown(); // Ensure we don't deadlock
-            smallBus.shutdown();
-        }
-    }
+    // When
+    eventBus.shutdown();
 
-    @Test
-    void testShutdown() throws Exception {
-        // Given
-        CountDownLatch latch = new CountDownLatch(1);
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> latch.countDown());
+    // Then
+    assertThrows(
+        IllegalStateException.class, () -> eventBus.publishAsync(new ApplicationStartedEvent()));
+  }
 
-        eventBus.publishAsync(new ApplicationStartedEvent());
-        assertTrue(latch.await(1, TimeUnit.SECONDS));
+  @Test
+  void testSubscriberCount() {
+    // Given
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
 
-        // When
-        eventBus.shutdown();
+    // Then
+    assertEquals(2, eventBus.subscriberCount(ApplicationStartedEvent.class));
+    assertEquals(0, eventBus.subscriberCount(ApplicationShutdownEvent.class));
+  }
 
-        // Then
-        assertThrows(IllegalStateException.class, () ->
-                eventBus.publishAsync(new ApplicationStartedEvent()));
-    }
+  @Test
+  void testDifferentEventTypes() {
+    // Given
+    List<ApplicationStartedEvent> startedEvents = new ArrayList<>();
+    List<ApplicationShutdownEvent> shutdownEvents = new ArrayList<>();
 
-    @Test
-    void testSubscriberCount() {
-        // Given
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
+    eventBus.subscribe(ApplicationStartedEvent.class, startedEvents::add);
+    eventBus.subscribe(ApplicationShutdownEvent.class, shutdownEvents::add);
 
-        // Then
-        assertEquals(2, eventBus.subscriberCount(ApplicationStartedEvent.class));
-        assertEquals(0, eventBus.subscriberCount(ApplicationShutdownEvent.class));
-    }
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
+    eventBus.publish(new ApplicationShutdownEvent());
 
-    @Test
-    void testDifferentEventTypes() {
-        // Given
-        List<ApplicationStartedEvent> startedEvents = new ArrayList<>();
-        List<ApplicationShutdownEvent> shutdownEvents = new ArrayList<>();
+    // Then
+    assertEquals(1, startedEvents.size());
+    assertEquals(1, shutdownEvents.size());
+  }
 
-        eventBus.subscribe(ApplicationStartedEvent.class, startedEvents::add);
-        eventBus.subscribe(ApplicationShutdownEvent.class, shutdownEvents::add);
+  @Test
+  void testEventMetadata() {
+    // Given
+    List<ApplicationStartedEvent> received = new ArrayList<>();
+    eventBus.subscribe(ApplicationStartedEvent.class, received::add);
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
-        eventBus.publish(new ApplicationShutdownEvent());
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
 
-        // Then
-        assertEquals(1, startedEvents.size());
-        assertEquals(1, shutdownEvents.size());
-    }
+    // Then
+    ApplicationStartedEvent event = received.get(0);
+    assertNotNull(event.eventId());
+    assertNotNull(event.occurredAt());
+    assertEquals("Bootstrap", event.source());
+  }
 
-    @Test
-    void testEventMetadata() {
-        // Given
-        List<ApplicationStartedEvent> received = new ArrayList<>();
-        eventBus.subscribe(ApplicationStartedEvent.class, received::add);
+  @Test
+  void testEventBusMetrics() throws Exception {
+    // Given
+    eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
+    eventBus.subscribe(ApplicationShutdownEvent.class, e -> {});
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
+    eventBus.publishAsync(new ApplicationShutdownEvent());
 
-        // Then
-        ApplicationStartedEvent event = received.get(0);
-        assertNotNull(event.eventId());
-        assertNotNull(event.occurredAt());
-        assertEquals("Bootstrap", event.source());
-    }
+    // Give async event time to be processed
+    Thread.sleep(100);
 
-    @Test
-    void testEventBusMetrics() throws Exception {
-        // Given
-        eventBus.subscribe(ApplicationStartedEvent.class, e -> {});
-        eventBus.subscribe(ApplicationShutdownEvent.class, e -> {});
+    EventBusMetrics metrics = eventBus.getMetrics();
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
-        eventBus.publishAsync(new ApplicationShutdownEvent());
-        
-        // Give async event time to be processed
-        Thread.sleep(100);
+    // Then
+    assertNotNull(metrics);
+    assertEquals(2, metrics.getTotalSubscribers(), "Should have 2 subscribers");
+    assertEquals(2, metrics.getTotalPublishedEvents(), "Should have published 2 events");
+    assertEquals(1, metrics.getTotalAsyncEvents(), "Should have 1 async event");
+    assertEquals(0, metrics.getTotalDroppedEvents(), "Should have 0 dropped events");
+    assertEquals(100, metrics.getQueueCapacity(), "Queue capacity should be 100");
+    assertFalse(metrics.isShutdown(), "EventBus should not be shutdown");
+    assertTrue(
+        metrics.getQueueUtilization() >= 0.0 && metrics.getQueueUtilization() <= 100.0,
+        "Queue utilization should be between 0 and 100");
+  }
 
-        EventBusMetrics metrics = eventBus.getMetrics();
+  @Test
+  void testEventPriorityDefaults() {
+    // Given
+    List<ApplicationStartedEvent> received = new ArrayList<>();
+    eventBus.subscribe(ApplicationStartedEvent.class, received::add);
 
-        // Then
-        assertNotNull(metrics);
-        assertEquals(2, metrics.getTotalSubscribers(), "Should have 2 subscribers");
-        assertEquals(2, metrics.getTotalPublishedEvents(), "Should have published 2 events");
-        assertEquals(1, metrics.getTotalAsyncEvents(), "Should have 1 async event");
-        assertEquals(0, metrics.getTotalDroppedEvents(), "Should have 0 dropped events");
-        assertEquals(100, metrics.getQueueCapacity(), "Queue capacity should be 100");
-        assertFalse(metrics.isShutdown(), "EventBus should not be shutdown");
-        assertTrue(metrics.getQueueUtilization() >= 0.0 && metrics.getQueueUtilization() <= 100.0,
-                "Queue utilization should be between 0 and 100");
-    }
+    // When
+    eventBus.publish(new ApplicationStartedEvent());
 
-    @Test
-    void testEventPriorityDefaults() {
-        // Given
-        List<ApplicationStartedEvent> received = new ArrayList<>();
-        eventBus.subscribe(ApplicationStartedEvent.class, received::add);
+    // Then
+    ApplicationStartedEvent event = received.get(0);
+    assertNotNull(event.priority(), "Event should have a priority");
+    assertEquals(EventPriority.NORMAL, event.priority(), "Default priority should be NORMAL");
+  }
 
-        // When
-        eventBus.publish(new ApplicationStartedEvent());
+  @Test
+  void testMetricsAfterShutdown() {
+    // Given
+    eventBus.publish(new ApplicationStartedEvent());
 
-        // Then
-        ApplicationStartedEvent event = received.get(0);
-        assertNotNull(event.priority(), "Event should have a priority");
-        assertEquals(EventPriority.NORMAL, event.priority(), "Default priority should be NORMAL");
-    }
+    // When
+    eventBus.shutdown();
+    EventBusMetrics metrics = eventBus.getMetrics();
 
-    @Test
-    void testMetricsAfterShutdown() {
-        // Given
-        eventBus.publish(new ApplicationStartedEvent());
-
-        // When
-        eventBus.shutdown();
-        EventBusMetrics metrics = eventBus.getMetrics();
-
-        // Then
-        assertTrue(metrics.isShutdown(), "Metrics should reflect shutdown state");
-        assertEquals(1, metrics.getTotalPublishedEvents(), "Published event count should persist");
-    }
+    // Then
+    assertTrue(metrics.isShutdown(), "Metrics should reflect shutdown state");
+    assertEquals(1, metrics.getTotalPublishedEvents(), "Published event count should persist");
+  }
 }

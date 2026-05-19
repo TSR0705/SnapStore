@@ -1,6 +1,6 @@
 # 🤝 Contributing to FileX
 
-Thank you for your interest in contributing to **FileX**! We want to make contributing to this project as frictionless and rewarding as possible. 
+Thank you for your interest in contributing to **FileX**! We want to make contributing to this project as frictionless and rewarding as possible.
 
 By participating in this project, you agree to abide by our **[Code of Conduct](CODE_OF_CONDUCT.md)**.
 

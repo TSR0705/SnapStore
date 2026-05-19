@@ -49,21 +49,21 @@ graph TD
     OS -->|Kernel Directory Streams| NWS
     NWS -->|Blocking Poll Detections| ME
     ME -->|Deduplicate & Normalize| evt_create & evt_modify & evt_delete
-    
+
     evt_create & evt_modify & evt_delete -->|Publish Event| EB
     EB -->|Asynchronous Event Queue| DE
-    
+
     DE -->|Evaluate Heuristic Rules| AE
     AE -->|Publish Security Incident| evt_inc
     evt_inc -->|Publish Event| EB
-    
+
     EB -->|Capture Incident Event| IPS
     IPS -->|Transaction Template Commit| DB
-    
+
     EB -->|Platform.runLater Callback| IWC
     IWC -->|Asynchronous Query| DB
     IWC -->|Populate Cards| UI
-    
+
     UI -->|Drill Down Forensics| EC
 ```
 
@@ -110,7 +110,7 @@ public final class AppContext {
     private final DetectionEngine detectionEngine;
     private final AlertEngine alertEngine;
     private final WorkspaceService workspaceService;
-    
+
     // Constructor-based composing
     public AppContext(AppConfig config,
                       DatabaseManager databaseManager,
@@ -154,16 +154,16 @@ sequenceDiagram
 
     JVM->>Boot: main(args)
     activate Boot
-    
+
     Boot->>Config: resolveMonitoredPaths()
     Note over Config: Parses -Dfilex.monitor.paths<br/>Fallback: System User Dirs
-    
+
     Boot->>DB: initializeDatabase()
     Note over DB: Executes DDL Migrations<br/>Enables WAL (Write-Ahead Logging)
-    
+
     Boot->>Bus: initializeEventBus()
     Note over Bus: Registers Persistence Subscribers
-    
+
     Boot->>Eng: start()
     activate Eng
     Note over Eng: Spawns Daemon: filex-watch-loop
@@ -278,7 +278,7 @@ erDiagram
         TEXT description
         TEXT occurred_at
     }
-    
+
     incidents ||--o{ incident_evidence : "contains"
     incidents ||--o{ forensic_timeline : "tracks"
 ```

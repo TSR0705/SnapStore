@@ -1,7 +1,6 @@
 package com.filex.persistence.migrations;
 
 import com.filex.persistence.Migration;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -10,39 +9,42 @@ import java.sql.Statement;
  * Migration: Create incident persistence and forensic timeline tables.
  *
  * <p>Creates tables for:
+ *
  * <ul>
- *   <li>incidents — correlated security incidents</li>
- *   <li>incident_evidence — immutable evidence chain linking detections to incidents</li>
- *   <li>forensic_timeline — chronological reconstruction of security events</li>
+ *   <li>incidents — correlated security incidents
+ *   <li>incident_evidence — immutable evidence chain linking detections to incidents
+ *   <li>forensic_timeline — chronological reconstruction of security events
  * </ul>
  *
  * <p>Design principles:
+ *
  * <ul>
- *   <li>Incidents are mutable (status, severity can escalate)</li>
- *   <li>Evidence records are append-only (immutable forensic chain)</li>
- *   <li>Timeline records are immutable (deterministic ordering)</li>
- *   <li>All timestamps stored as epoch milliseconds (INTEGER)</li>
- *   <li>Foreign keys enforce referential integrity</li>
+ *   <li>Incidents are mutable (status, severity can escalate)
+ *   <li>Evidence records are append-only (immutable forensic chain)
+ *   <li>Timeline records are immutable (deterministic ordering)
+ *   <li>All timestamps stored as epoch milliseconds (INTEGER)
+ *   <li>Foreign keys enforce referential integrity
  * </ul>
  */
 public final class V005_CreateIncidentTables implements Migration {
 
-    @Override
-    public int version() {
-        return 5;
-    }
+  @Override
+  public int version() {
+    return 5;
+  }
 
-    @Override
-    public String description() {
-        return "Create incident persistence and forensic timeline tables";
-    }
+  @Override
+  public String description() {
+    return "Create incident persistence and forensic timeline tables";
+  }
 
-    @Override
-    public void migrate(Connection connection) throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
+  @Override
+  public void migrate(Connection connection) throws SQLException {
+    try (Statement stmt = connection.createStatement()) {
 
-            // Incidents table - correlated security incidents
-            stmt.execute("""
+      // Incidents table - correlated security incidents
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS incidents (
                         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
                         incident_id         TEXT    NOT NULL UNIQUE,
@@ -61,8 +63,9 @@ public final class V005_CreateIncidentTables implements Migration {
                     );
                     """);
 
-            // Incident evidence table - immutable evidence chain
-            stmt.execute("""
+      // Incident evidence table - immutable evidence chain
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS incident_evidence (
                         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
                         evidence_id         TEXT    NOT NULL UNIQUE,
@@ -80,8 +83,9 @@ public final class V005_CreateIncidentTables implements Migration {
                     );
                     """);
 
-            // Forensic timeline table - chronological event reconstruction
-            stmt.execute("""
+      // Forensic timeline table - chronological event reconstruction
+      stmt.execute(
+          """
                     CREATE TABLE IF NOT EXISTS forensic_timeline (
                         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
                         timeline_id         TEXT    NOT NULL UNIQUE,
@@ -100,6 +104,6 @@ public final class V005_CreateIncidentTables implements Migration {
                         FOREIGN KEY (evidence_id) REFERENCES incident_evidence(evidence_id) ON DELETE SET NULL
                     );
                     """);
-        }
     }
+  }
 }

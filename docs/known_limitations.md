@@ -11,7 +11,7 @@ As a production-grade local security agent, **FileX** maintains high fidelity in
 ---
 
 ## 2. In-Memory Backpressure
-* **Event Storms:** During heavy filesystem writes (e.g. major OS updates or bulk compilation runs), the raw event queue can flood with thousands of modify events per second. The present evaluation queue operates on an unbound memory buffer. Extreme volume write storms can increase JVM heap consumption and potentially trigger Out Of Memory (`OOM`) crashes. 
+* **Event Storms:** During heavy filesystem writes (e.g. major OS updates or bulk compilation runs), the raw event queue can flood with thousands of modify events per second. The present evaluation queue operates on an unbound memory buffer. Extreme volume write storms can increase JVM heap consumption and potentially trigger Out Of Memory (`OOM`) crashes.
 * **Hardening Path:** Implement fixed-capacity circular buffers with drop-tail fallback policies for non-security paths in upcoming releases.
 
 ---

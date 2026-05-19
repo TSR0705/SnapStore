@@ -12,7 +12,7 @@ jobs:
   build:
     name: Build & Verify Java ${{ matrix.java-version }}
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         java-version: [ 21 ]

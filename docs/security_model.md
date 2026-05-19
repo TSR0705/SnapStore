@@ -34,5 +34,5 @@ FileX captures directory alterations at the OS API layer. It assumes that native
 
 ## 2. Trust Boundary 2: Forensic Archive & Persistence
 All threat intelligence data and evidence history are maintained inside an embedded database (`filex.db`):
-* **Access Control:** FileX relies on the host operating system's native Access Control Lists (ACLs) to secure the `filex.db` database. 
+* **Access Control:** FileX relies on the host operating system's native Access Control Lists (ACLs) to secure the `filex.db` database.
 * **Hardening Rule:** Ensure that the host file directory containing `filex.db` is restricted to the specific OS security group executing the FileX process, preventing unauthorized users from modifying threat reports.
